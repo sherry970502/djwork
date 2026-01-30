@@ -117,25 +117,38 @@ exports.generateMonthlyInsight = async (req, res) => {
     // Check if insight already exists
     let insight = await MonthlyInsight.findOne({ month });
 
-    // Get recent thoughts for the month
-    const startDate = new Date(`${month}-01`);
+    // Get date range for the month (使用 UTC 避免时区问题)
+    const startDate = new Date(`${month}-01T00:00:00.000Z`);
     const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1);
+    endDate.setUTCMonth(endDate.getUTCMonth() + 1);
 
+    console.log(`月度洞察数据查询范围: ${startDate.toISOString()} - ${endDate.toISOString()}`);
+
+    // Get recent thoughts for the month (提高限制，获取更多数据)
     const recentThoughts = await Thought.find({
       isMerged: false,
       createdAt: { $gte: startDate, $lt: endDate }
     })
     .populate('tags')
     .sort({ isImportant: -1, createdAt: -1 })
-    .limit(50);
+    .limit(100);  // 从 50 提高到 100
 
-    // Get pending tasks
+    console.log(`本月找到 ${recentThoughts.length} 条灵感/思考`);
+
+    // Get pending tasks (获取该月创建或更新的任务)
     const pendingTasks = await OrganizationTask.find({
-      status: { $in: ['pending', 'completed'] }
+      $or: [
+        { status: { $in: ['pending', 'analyzing'] } },  // 待处理的任务
+        {
+          status: 'completed',
+          createdAt: { $gte: startDate, $lt: endDate }  // 本月完成的任务
+        }
+      ]
     })
     .sort({ priority: 1, createdAt: -1 })
-    .limit(20);
+    .limit(30);  // 从 20 提高到 30
+
+    console.log(`找到 ${pendingTasks.length} 条相关任务`);
 
     // Generate insight
     const insightResult = await strategicAdvisorService.generateMonthlyInsight(
