@@ -1,10 +1,12 @@
-const { execSync } = require('child_process');
+const Anthropic = require('@anthropic-ai/sdk');
 const config = require('../config');
 const { Thought } = require('../models');
 
 class StrategicAdvisorService {
   constructor() {
-    this.apiKey = config.claudeApiKey;
+    this.client = new Anthropic({
+      apiKey: config.claudeApiKey
+    });
     this.model = 'claude-3-haiku-20240307';
 
     // 核心知识库上下文
@@ -30,51 +32,30 @@ class StrategicAdvisorService {
   }
 
   /**
-   * Call Claude API using curl command with retry logic
+   * Call Claude API using Anthropic SDK with retry logic
    */
   async callClaudeAPI(messages, maxTokens = 4096, retries = 3) {
-    const payload = JSON.stringify({
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: messages
-    });
-
-    const escapedPayload = payload.replace(/'/g, "'\\''");
-
-    const curlCommand = `/usr/bin/curl -s https://api.anthropic.com/v1/messages \
-      -H "Content-Type: application/json" \
-      -H "x-api-key: ${this.apiKey}" \
-      -H "anthropic-version: 2023-06-01" \
-      -d '${escapedPayload}'`;
-
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const result = execSync(curlCommand, {
-          encoding: 'utf-8',
-          maxBuffer: 10 * 1024 * 1024,
-          timeout: 180000
+        const response = await this.client.messages.create({
+          model: this.model,
+          max_tokens: maxTokens,
+          messages: messages
         });
-
-        const response = JSON.parse(result);
-
-        if (response.error) {
-          // 如果是过载错误，等待后重试
-          if (response.error.type === 'overloaded_error' && attempt < retries) {
-            console.log(`API 过载，等待 ${attempt * 5} 秒后重试 (${attempt}/${retries})...`);
-            await new Promise(resolve => setTimeout(resolve, attempt * 5000));
-            continue;
-          }
-          throw new Error(`${response.error.type}: ${response.error.message}`);
-        }
 
         return response;
       } catch (error) {
+        // 如果是过载错误，等待后重试
+        if (error.status === 529 && attempt < retries) {
+          console.log(`API 过载，等待 ${attempt * 5} 秒后重试 (${attempt}/${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, attempt * 5000));
+          continue;
+        }
+
         if (attempt === retries) {
-          if (error.message.includes(':')) {
-            throw error;
-          }
           throw new Error(`API call failed: ${error.message}`);
         }
+
         // 其他错误也重试
         console.log(`API 调用失败，重试 (${attempt}/${retries})...`);
         await new Promise(resolve => setTimeout(resolve, attempt * 3000));
