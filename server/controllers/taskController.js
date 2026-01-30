@@ -7,7 +7,7 @@ const config = require('../config');
 const DJ_ROLES = {
   manager: { label: '管理者', description: '去做决策' },
   lead_designer: { label: '主设计师', description: '去做设计' },
-  mentor: { label: '指导设计师', description: '提供辅导或培训' },
+  mentor: { label: '指导设计师', description: '提供设计指导' },
   expert: { label: '专家', description: '进行验收' }
 };
 
@@ -16,28 +16,55 @@ async function analyzeDJRole(title, description) {
   try {
     const client = new Anthropic({ apiKey: config.claudeApiKey });
 
-    const prompt = `你是一个组织管理分析助手。请根据以下事务的标题和描述，判断 DJ（董事长）在这件事情上应该扮演什么角色。
+    const prompt = `你是一个组织角色分析助手。DJ 是一位资深设计师出身的领导者，请根据事务的本质来判断 DJ 应该扮演什么角色。
 
 ## 事务信息
 标题：${title}
 描述：${description}
 
 ## 可选角色（只能选择一个）
-1. manager（管理者）：需要 DJ 做出关键决策、拍板、审批的事务
-2. lead_designer（主设计师）：需要 DJ 亲自主导设计、规划方案的事务
-3. mentor（指导设计师）：需要 DJ 提供指导、辅导、培训，但不需要亲自执行的事务
-4. expert（专家）：需要 DJ 进行最终验收、评审、把关质量的事务
 
-## 判断原则
-- 如果是战略决策、资源分配、重大方向选择 → manager
-- 如果是核心产品/业务的设计、创新方案的制定 → lead_designer
-- 如果是团队能力提升、方法论传授、过程中的指导 → mentor
-- 如果是成果验收、质量把关、最终评审 → expert
+### 1. mentor（指导设计师）- 最常见的角色
+DJ 需要以设计思维来引导团队思考"为什么"和"价值是什么"的事务。
+典型特征：
+- 涉及"为什么要这样做"、"这样做的价值是什么"等设计思考
+- 需要分析事物背后的逻辑和意义
+- 需要传授设计方法论或思维方式
+- 产品/功能/体验相关的优化和改进思考
+- 需要 DJ 提供方向性指导，但团队来执行
+
+### 2. lead_designer（主设计师）
+DJ 需要亲自动手设计、亲自产出方案的事务。
+典型特征：
+- DJ 需要亲自完成设计产出物
+- 核心创新项目需要 DJ 亲自操刀
+- 重要的对外展示/汇报材料需要 DJ 亲自制作
+
+### 3. manager（管理者）
+纯粹的管理决策事务，与设计思考无关。
+典型特征：
+- 预算审批、资源分配
+- 人事决策（招聘、晋升、调岗）
+- 商务合作的最终拍板
+- 组织架构调整
+
+### 4. expert（专家）
+DJ 需要进行质量把关和验收的事务。
+典型特征：
+- 项目交付前的最终评审
+- 重要产出物的质量验收
+- 对外发布前的把关
+
+## 判断要点
+⚠️ 很多看起来像"决策"的事务，本质上是"设计思考"：
+- "XX需要增加/优化/改进" → 这是设计问题，需要分析"为什么"→ mentor
+- "如何提升XX效果" → 这是设计问题，需要思考价值和方法 → mentor
+- "XX方案的选择" → 如果涉及设计取舍 → mentor；如果纯粹是资源/预算 → manager
 
 ## 输出格式（JSON）
 {
-  "role": "角色英文名（manager/lead_designer/mentor/expert）",
-  "reason": "简短说明为什么推荐这个角色（20字以内）"
+  "role": "角色英文名",
+  "reason": "说明这个事务的本质是什么，为什么需要这个角色（30字以内）"
 }
 
 只输出JSON，不要有其他内容。`;
