@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Layout, Menu, ConfigProvider } from 'antd';
+import { Layout, Menu, ConfigProvider, Button } from 'antd';
 import {
   HomeOutlined,
   FileTextOutlined,
@@ -11,7 +11,8 @@ import {
   QuestionCircleOutlined,
   RocketOutlined,
   ExperimentOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  LogoutOutlined
 } from '@ant-design/icons';
 import HomePage from './pages/HomePage';
 import MonthlyPlanPage from './pages/MonthlyPlanPage';
@@ -24,11 +25,40 @@ import TasksPage from './pages/TasksPage';
 import KnowledgePage from './pages/KnowledgePage';
 import InsightsPage from './pages/InsightsPage';
 import PersonalDesignsPage from './pages/PersonalDesignsPage';
+import LoginPage from './pages/LoginPage';
 
 const { Header, Content, Sider } = Layout;
 
 const App: React.FC = () => {
   const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('dj_authenticated') === 'true';
+  });
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('dj_authenticated');
+    setIsAuthenticated(false);
+  };
+
+  // 如果未登录，显示登录页
+  if (!isAuthenticated) {
+    return (
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: '#667eea',
+            borderRadius: 8,
+          }
+        }}
+      >
+        <LoginPage onLogin={handleLogin} />
+      </ConfigProvider>
+    );
+  }
 
   const menuItems = [
     {
@@ -156,10 +186,18 @@ const App: React.FC = () => {
           />
         </Sider>
         <Layout>
-          <Header className="modern-header" style={{ padding: '0 24px', display: 'flex', alignItems: 'center' }}>
+          <Header className="modern-header" style={{ padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 className="header-title" style={{ margin: 0 }}>
               DJ 工作事务处理系统
             </h2>
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              style={{ color: 'inherit' }}
+            >
+              退出登录
+            </Button>
           </Header>
           <Content className="modern-content">
             <Routes>
