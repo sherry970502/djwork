@@ -531,6 +531,7 @@ exports.generateIdeas = async (req, res) => {
 
     // 更新状态为发散中
     design.status = 'ideating';
+    design.ideaGenerationError = null;  // 清除之前的错误
     await design.save();
 
     res.json({
@@ -540,54 +541,10 @@ exports.generateIdeas = async (req, res) => {
     });
 
     // 异步执行 AI 发散
-    try {
-      // 查找相关的灵感思考
-      const relatedThoughts = await Thought.find({
-        isMerged: false,
-        $or: [
-          { content: { $regex: design.title.substring(0, 10), $options: 'i' } },
-          { content: { $regex: design.description?.substring(0, 20) || '', $options: 'i' } }
-        ]
-      })
-      .populate('tags')
-      .limit(10);
+    generateIdeasAsync(design._id).catch(err => {
+      console.error('Async idea generation error:', err);
+    });
 
-      let dimensionIdeas;
-
-      // 如果用户已预设维度，直接使用；否则让 AI 筛选
-      if (design.selectedDimensions && design.selectedDimensions.length > 0) {
-        console.log(`Using user-specified dimensions: ${design.selectedDimensions.map(d => d.displayName).join(', ')}`);
-        dimensionIdeas = await creativeService.generateDimensionIdeas(
-          design,
-          design.selectedDimensions,
-          relatedThoughts
-        );
-      } else {
-        // 获取所有激活的维度，让 AI 筛选
-        const allDimensions = await DesignDimension.find({ isActive: true })
-          .sort({ sortOrder: 1 });
-
-        dimensionIdeas = await creativeService.generateIdeasWithDimensionSelection(
-          design,
-          allDimensions,
-          relatedThoughts
-        );
-
-        // 更新选中的维度
-        design.selectedDimensions = dimensionIdeas.map(di => di.dimensionId);
-      }
-
-      // 更新设计
-      design.dimensionIdeas = dimensionIdeas;
-      design.relatedThoughts = relatedThoughts.map(t => t._id);
-      design.status = 'designing';
-      await design.save();
-
-    } catch (error) {
-      console.error('Idea generation failed:', error);
-      design.status = 'draft';
-      await design.save();
-    }
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -595,6 +552,94 @@ exports.generateIdeas = async (req, res) => {
     });
   }
 };
+
+// 异步执行创意发散
+async function generateIdeasAsync(designId) {
+  const design = await PersonalDesign.findById(designId)
+    .populate('selectedDimensions');
+
+  if (!design) {
+    console.error(`Design ${designId} not found for async idea generation`);
+    return;
+  }
+
+  console.log(`[创意发散] 开始处理设计: ${design.title}`);
+
+  try {
+    // 查找相关的灵感思考
+    const relatedThoughts = await Thought.find({
+      isMerged: false,
+      $or: [
+        { content: { $regex: design.title.substring(0, 10), $options: 'i' } },
+        { content: { $regex: design.description?.substring(0, 20) || '', $options: 'i' } }
+      ]
+    })
+    .populate('tags')
+    .limit(10);
+
+    console.log(`[创意发散] 找到 ${relatedThoughts.length} 条相关灵感`);
+
+    let dimensionIdeas;
+
+    // 如果用户已预设维度，直接使用；否则让 AI 筛选
+    if (design.selectedDimensions && design.selectedDimensions.length > 0) {
+      console.log(`[创意发散] 使用用户预设的 ${design.selectedDimensions.length} 个维度`);
+      dimensionIdeas = await creativeService.generateDimensionIdeas(
+        design,
+        design.selectedDimensions,
+        relatedThoughts
+      );
+    } else {
+      // 获取所有激活的维度，让 AI 筛选
+      const allDimensions = await DesignDimension.find({ isActive: true })
+        .sort({ sortOrder: 1 });
+
+      console.log(`[创意发散] AI 从 ${allDimensions.length} 个维度中筛选`);
+
+      if (allDimensions.length === 0) {
+        throw new Error('没有可用的设计维度，请先在维度管理中添加维度');
+      }
+
+      dimensionIdeas = await creativeService.generateIdeasWithDimensionSelection(
+        design,
+        allDimensions,
+        relatedThoughts
+      );
+
+      // 更新选中的维度
+      if (dimensionIdeas && dimensionIdeas.length > 0) {
+        design.selectedDimensions = dimensionIdeas.map(di => di.dimensionId).filter(id => id);
+      }
+    }
+
+    if (!dimensionIdeas || dimensionIdeas.length === 0) {
+      throw new Error('AI 未能生成任何创意，请检查维度配置或重试');
+    }
+
+    // 更新设计
+    design.dimensionIdeas = dimensionIdeas;
+    design.relatedThoughts = relatedThoughts.map(t => t._id);
+    design.status = 'designing';
+    design.ideaGenerationError = null;
+    await design.save();
+
+    console.log(`[创意发散] 完成！生成了 ${dimensionIdeas.length} 个维度的创意`);
+
+  } catch (error) {
+    console.error(`[创意发散] 失败:`, error.message);
+
+    // 使用独立的数据库更新，确保状态被正确回滚
+    try {
+      await PersonalDesign.findByIdAndUpdate(designId, {
+        status: 'draft',
+        ideaGenerationError: error.message || '创意发散失败，请重试'
+      });
+      console.log(`[创意发散] 状态已回滚为 draft`);
+    } catch (updateError) {
+      console.error(`[创意发散] 状态回滚失败:`, updateError.message);
+    }
+  }
+}
 
 // 生成综合创意方案
 exports.generateProposal = async (req, res) => {

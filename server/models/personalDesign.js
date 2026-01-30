@@ -121,6 +121,11 @@ const personalDesignSchema = new mongoose.Schema({
   notes: {
     type: String
   },
+  // 创意发散错误信息（用于调试和显示）
+  ideaGenerationError: {
+    type: String,
+    default: null
+  },
   // 相关灵感思考（来自知识库）
   relatedThoughts: [{
     type: mongoose.Schema.Types.ObjectId,
