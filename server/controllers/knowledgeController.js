@@ -124,16 +124,50 @@ exports.generateMonthlyInsight = async (req, res) => {
 
     console.log(`月度洞察数据查询范围: ${startDate.toISOString()} - ${endDate.toISOString()}`);
 
-    // Get recent thoughts for the month (提高限制，获取更多数据)
-    const recentThoughts = await Thought.find({
+    // 智能筛选策略：优先获取重要的、有标签的灵感
+    // 第一优先级：标记为重要的
+    const importantThoughts = await Thought.find({
       isMerged: false,
+      isImportant: true,
       createdAt: { $gte: startDate, $lt: endDate }
     })
     .populate('tags')
-    .sort({ isImportant: -1, createdAt: -1 })
-    .limit(100);  // 从 50 提高到 100
+    .sort({ createdAt: -1 })
+    .limit(100);
 
-    console.log(`本月找到 ${recentThoughts.length} 条灵感/思考`);
+    // 第二优先级：有标签的（排除已获取的重要灵感）
+    const importantIds = importantThoughts.map(t => t._id);
+    const taggedThoughts = await Thought.find({
+      isMerged: false,
+      isImportant: { $ne: true },
+      tags: { $exists: true, $ne: [] },
+      _id: { $nin: importantIds },
+      createdAt: { $gte: startDate, $lt: endDate }
+    })
+    .populate('tags')
+    .sort({ createdAt: -1 })
+    .limit(150);
+
+    // 第三优先级：其他灵感（补充到 300 条）
+    const existingIds = [...importantIds, ...taggedThoughts.map(t => t._id)];
+    const remainingLimit = 300 - importantThoughts.length - taggedThoughts.length;
+
+    let otherThoughts = [];
+    if (remainingLimit > 0) {
+      otherThoughts = await Thought.find({
+        isMerged: false,
+        _id: { $nin: existingIds },
+        createdAt: { $gte: startDate, $lt: endDate }
+      })
+      .populate('tags')
+      .sort({ createdAt: -1 })
+      .limit(remainingLimit);
+    }
+
+    // 合并所有灵感
+    const recentThoughts = [...importantThoughts, ...taggedThoughts, ...otherThoughts];
+
+    console.log(`本月灵感筛选结果: 重要 ${importantThoughts.length} 条, 有标签 ${taggedThoughts.length} 条, 其他 ${otherThoughts.length} 条, 共 ${recentThoughts.length} 条`);
 
     // Get pending tasks (获取该月创建或更新的任务)
     const pendingTasks = await OrganizationTask.find({
