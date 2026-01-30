@@ -120,6 +120,26 @@ export interface TaskAnalysis {
     costAndReturn: string;
   };
   relatedThoughts: Thought[];
+  referenceSources?: {
+    totalThoughts: number;
+    meetings: {
+      _id: string;
+      title: string;
+      meetingDate: string;
+      thoughts: {
+        _id: string;
+        content: string;
+        tags: string[];
+      }[];
+    }[];
+    thoughtDetails: {
+      _id: string;
+      content: string;
+      tags: string[];
+      isImportant: boolean;
+      createdAt: string;
+    }[];
+  };
   createdAt: string;
 }
 

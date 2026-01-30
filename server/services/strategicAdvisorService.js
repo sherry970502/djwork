@@ -107,12 +107,13 @@ class StrategicAdvisorService {
       return [];
     }
 
-    // 4. 执行查询
+    // 4. 执行查询（同时 populate 会议信息）
     const thoughts = await Thought.find({
       isMerged: false,
       $or: queryConditions
     })
     .populate('tags')
+    .populate('meetingMinutesId', 'title meetingDate')  // 关联会议标题和日期
     .sort({ isImportant: -1, createdAt: -1 })
     .limit(limit * 2);  // 多获取一些，后面去重
 
@@ -220,6 +221,9 @@ class StrategicAdvisorService {
     const phase3 = await this.analyzePhase3(task, thoughtsContext, phase1, phase2);
     console.log('Phase 3 完成');
 
+    // 整理引用来源信息
+    const referenceSources = this.buildReferenceSources(relatedThoughts);
+
     // 合并所有分析结果
     const analysis = {
       categoryPrediction: phase1.categoryPrediction,
@@ -232,10 +236,63 @@ class StrategicAdvisorService {
       step6_risk: phase3.step6_risk,
       recommendation: phase3.recommendation,
       relatedThoughts: relatedThoughts.map(t => t._id),
+      referenceSources: referenceSources,  // 新增：引用来源详情
       createdAt: new Date()
     };
 
     return analysis;
+  }
+
+  /**
+   * 整理引用来源信息
+   */
+  buildReferenceSources(relatedThoughts) {
+    // 按会议分组
+    const meetingMap = new Map();
+    const thoughtDetails = [];
+
+    for (const thought of relatedThoughts) {
+      // 收集灵感详情
+      const tags = thought.tags?.map(t => t.displayName || t.name) || [];
+      thoughtDetails.push({
+        _id: thought._id,
+        content: thought.content,
+        tags: tags,
+        isImportant: thought.isImportant,
+        createdAt: thought.createdAt
+      });
+
+      // 按会议分组
+      if (thought.meetingMinutesId) {
+        const meeting = thought.meetingMinutesId;
+        const meetingId = meeting._id?.toString() || meeting.toString();
+
+        if (!meetingMap.has(meetingId)) {
+          meetingMap.set(meetingId, {
+            _id: meetingId,
+            title: meeting.title || '未知会议',
+            meetingDate: meeting.meetingDate,
+            thoughts: []
+          });
+        }
+
+        meetingMap.get(meetingId).thoughts.push({
+          _id: thought._id,
+          content: thought.content.substring(0, 100) + (thought.content.length > 100 ? '...' : ''),
+          tags: tags
+        });
+      }
+    }
+
+    // 转换为数组并按日期排序
+    const meetings = Array.from(meetingMap.values())
+      .sort((a, b) => new Date(b.meetingDate) - new Date(a.meetingDate));
+
+    return {
+      totalThoughts: relatedThoughts.length,
+      meetings: meetings,
+      thoughtDetails: thoughtDetails
+    };
   }
 
   /**

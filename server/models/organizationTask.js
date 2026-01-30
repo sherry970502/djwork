@@ -59,6 +59,27 @@ const analysisSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Thought'
   }],
+  // 引用来源详情
+  referenceSources: {
+    totalThoughts: { type: Number, default: 0 },
+    meetings: [{
+      _id: String,
+      title: String,
+      meetingDate: Date,
+      thoughts: [{
+        _id: mongoose.Schema.Types.ObjectId,
+        content: String,
+        tags: [String]
+      }]
+    }],
+    thoughtDetails: [{
+      _id: mongoose.Schema.Types.ObjectId,
+      content: String,
+      tags: [String],
+      isImportant: Boolean,
+      createdAt: Date
+    }]
+  },
   createdAt: {
     type: Date,
     default: Date.now

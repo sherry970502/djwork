@@ -30,7 +30,10 @@ import {
   BulbOutlined,
   AimOutlined,
   RocketOutlined,
-  SafetyOutlined
+  SafetyOutlined,
+  FileTextOutlined,
+  BookOutlined,
+  StarFilled
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -629,6 +632,102 @@ const TasksPage: React.FC = () => {
                       }
                     ]}
                   />
+
+                  {/* 引用来源 */}
+                  {selectedTask.analysis.referenceSources && selectedTask.analysis.referenceSources.totalThoughts > 0 && (
+                    <Card
+                      title={
+                        <Space>
+                          <BookOutlined style={{ color: '#667eea' }} />
+                          <span>分析引用来源</span>
+                          <Tag color="blue">{selectedTask.analysis.referenceSources.totalThoughts} 条相关灵感</Tag>
+                        </Space>
+                      }
+                      style={{ marginTop: 24, borderRadius: 12 }}
+                      size="small"
+                    >
+                      {/* 来源会议 */}
+                      {selectedTask.analysis.referenceSources.meetings.length > 0 && (
+                        <div style={{ marginBottom: 16 }}>
+                          <Text strong style={{ display: 'block', marginBottom: 12, color: '#667eea' }}>
+                            <FileTextOutlined /> 参考的会议纪要
+                          </Text>
+                          {selectedTask.analysis.referenceSources.meetings.map(meeting => (
+                            <Card
+                              key={meeting._id}
+                              size="small"
+                              style={{ marginBottom: 12, background: '#fafafa' }}
+                            >
+                              <div style={{ marginBottom: 8 }}>
+                                <Text strong>{meeting.title}</Text>
+                                <Text type="secondary" style={{ marginLeft: 12 }}>
+                                  {dayjs(meeting.meetingDate).format('YYYY-MM-DD')}
+                                </Text>
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                {meeting.thoughts.map(thought => (
+                                  <Tag
+                                    key={thought._id}
+                                    style={{
+                                      maxWidth: 300,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                    title={thought.content}
+                                  >
+                                    {thought.content}
+                                  </Tag>
+                                ))}
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 引用的灵感详情 */}
+                      <div>
+                        <Text strong style={{ display: 'block', marginBottom: 12, color: '#667eea' }}>
+                          <BulbOutlined /> 引用的灵感知识库内容
+                        </Text>
+                        <List
+                          size="small"
+                          dataSource={selectedTask.analysis.referenceSources.thoughtDetails}
+                          renderItem={thought => (
+                            <List.Item
+                              style={{
+                                background: thought.isImportant ? 'linear-gradient(135deg, rgba(250, 219, 20, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%)' : '#fafafa',
+                                marginBottom: 8,
+                                borderRadius: 8,
+                                padding: '12px 16px',
+                                border: thought.isImportant ? '1px solid rgba(250, 219, 20, 0.3)' : '1px solid #f0f0f0'
+                              }}
+                            >
+                              <div style={{ width: '100%' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                  {thought.isImportant && (
+                                    <StarFilled style={{ color: '#fadb14' }} />
+                                  )}
+                                  {thought.tags.map(tag => (
+                                    <Tag key={tag} color="blue" style={{ margin: 0 }}>{tag}</Tag>
+                                  ))}
+                                  <Text type="secondary" style={{ marginLeft: 'auto', fontSize: 12 }}>
+                                    {dayjs(thought.createdAt).format('YYYY-MM-DD')}
+                                  </Text>
+                                </div>
+                                <Paragraph
+                                  style={{ margin: 0, color: '#333' }}
+                                  ellipsis={{ rows: 2, expandable: true, symbol: '展开' }}
+                                >
+                                  {thought.content}
+                                </Paragraph>
+                              </div>
+                            </List.Item>
+                          )}
+                        />
+                      </div>
+                    </Card>
+                  )}
                 </>
               )}
 
