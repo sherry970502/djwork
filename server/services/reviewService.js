@@ -1,43 +1,40 @@
-const { execSync } = require('child_process');
+const Anthropic = require('@anthropic-ai/sdk');
 const config = require('../config');
 
 class ReviewService {
   constructor() {
-    this.apiKey = config.claudeApiKey;
+    this.client = new Anthropic({
+      apiKey: config.claudeApiKey
+    });
     this.model = 'claude-3-haiku-20240307';
   }
 
-  async callClaudeAPI(messages, maxTokens = 4096) {
-    const payload = JSON.stringify({
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: messages
-    });
+  async callClaudeAPI(messages, maxTokens = 4096, retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await this.client.messages.create({
+          model: this.model,
+          max_tokens: maxTokens,
+          messages: messages
+        });
 
-    const escapedPayload = payload.replace(/'/g, "'\\''");
+        return response;
+      } catch (error) {
+        // 如果是过载错误，等待后重试
+        if (error.status === 529 && attempt < retries) {
+          console.log(`API 过载，等待 ${attempt * 5} 秒后重试 (${attempt}/${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, attempt * 5000));
+          continue;
+        }
 
-    const curlCommand = `/usr/bin/curl -s https://api.anthropic.com/v1/messages \
-      -H "Content-Type: application/json" \
-      -H "x-api-key: ${this.apiKey}" \
-      -H "anthropic-version: 2023-06-01" \
-      -d '${escapedPayload}'`;
+        if (attempt === retries) {
+          throw new Error(`API call failed: ${error.message}`);
+        }
 
-    try {
-      const result = execSync(curlCommand, {
-        encoding: 'utf-8',
-        maxBuffer: 10 * 1024 * 1024,
-        timeout: 180000
-      });
-
-      const response = JSON.parse(result);
-
-      if (response.error) {
-        throw new Error(`${response.error.type}: ${response.error.message}`);
+        // 其他错误也重试
+        console.log(`API 调用失败，重试 (${attempt}/${retries})...`);
+        await new Promise(resolve => setTimeout(resolve, attempt * 3000));
       }
-
-      return response;
-    } catch (error) {
-      throw new Error(`API call failed: ${error.message}`);
     }
   }
 
