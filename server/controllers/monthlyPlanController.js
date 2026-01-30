@@ -649,3 +649,287 @@ exports.updateItemProject = async (req, res) => {
     });
   }
 };
+
+// 获取计划项目的相关会议（智能检索）
+exports.getRelatedMeetingsForItem = async (req, res) => {
+  try {
+    const { month, itemId } = req.params;
+
+    const plan = await MonthlyPlan.findOne({ month });
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: '月度计划不存在'
+      });
+    }
+
+    const item = plan.items.id(itemId);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: '计划项目不存在'
+      });
+    }
+
+    // 计算月份的开始和结束时间
+    const startDate = new Date(`${month}-01T00:00:00.000Z`);
+    const endDate = new Date(startDate);
+    endDate.setUTCMonth(endDate.getUTCMonth() + 1);
+
+    // 提取关键词
+    const keywords = extractKeywords(`${item.title} ${item.description || ''}`);
+    console.log(`[复盘检索] 计划项目: ${item.title}`);
+    console.log(`[复盘检索] 提取关键词: ${keywords.join(', ')}`);
+
+    // 获取该月所有会议
+    const allMeetings = await MeetingMinutes.find({
+      processStatus: 'completed',
+      meetingDate: { $gte: startDate, $lt: endDate }
+    }).lean();
+
+    // 为每个会议获取关联的思考
+    for (const meeting of allMeetings) {
+      const meetingThoughts = await Thought.find({ meetingMinutesId: meeting._id }).populate('tags').lean();
+      meeting.thoughts = meetingThoughts;
+    }
+
+    // 对每个会议计算相关性得分
+    const scoredMeetings = allMeetings.map(meeting => {
+      let score = 0;
+      const matchedKeywords = [];
+
+      // 检查会议标题
+      for (const keyword of keywords) {
+        if (meeting.title && meeting.title.toLowerCase().includes(keyword.toLowerCase())) {
+          score += 10;
+          matchedKeywords.push({ keyword, source: '会议标题' });
+        }
+      }
+
+      // 检查会议内容
+      for (const keyword of keywords) {
+        if (meeting.content && meeting.content.toLowerCase().includes(keyword.toLowerCase())) {
+          score += 5;
+          if (!matchedKeywords.find(m => m.keyword === keyword)) {
+            matchedKeywords.push({ keyword, source: '会议内容' });
+          }
+        }
+      }
+
+      // 检查灵感标签和内容
+      for (const thought of meeting.thoughts || []) {
+        const tagNames = thought.tags?.map(t => t.displayName || t.name) || [];
+
+        for (const keyword of keywords) {
+          // 标签匹配
+          if (tagNames.some(tag => tag.toLowerCase().includes(keyword.toLowerCase()))) {
+            score += 8;
+            if (!matchedKeywords.find(m => m.keyword === keyword)) {
+              matchedKeywords.push({ keyword, source: '灵感标签' });
+            }
+          }
+          // 灵感内容匹配
+          if (thought.content && thought.content.toLowerCase().includes(keyword.toLowerCase())) {
+            score += 3;
+            if (!matchedKeywords.find(m => m.keyword === keyword)) {
+              matchedKeywords.push({ keyword, source: '灵感内容' });
+            }
+          }
+        }
+      }
+
+      return {
+        _id: meeting._id,
+        title: meeting.title,
+        meetingDate: meeting.meetingDate,
+        thoughtCount: meeting.thoughts?.length || 0,
+        score,
+        matchedKeywords,
+        isRecommended: score > 0
+      };
+    });
+
+    // 排序：有匹配的在前，按得分降序
+    scoredMeetings.sort((a, b) => b.score - a.score);
+
+    // 同时获取相关灵感
+    const thoughts = await Thought.find({
+      isMerged: false,
+      createdAt: { $gte: startDate, $lt: endDate }
+    }).populate('tags').lean();
+
+    const scoredThoughts = thoughts.map(thought => {
+      let score = 0;
+      const matchedKeywords = [];
+      const tagNames = thought.tags?.map(t => t.displayName || t.name) || [];
+
+      for (const keyword of keywords) {
+        // 标签匹配
+        if (tagNames.some(tag => tag.toLowerCase().includes(keyword.toLowerCase()))) {
+          score += 10;
+          matchedKeywords.push({ keyword, source: '标签' });
+        }
+        // 内容匹配
+        if (thought.content && thought.content.toLowerCase().includes(keyword.toLowerCase())) {
+          score += 5;
+          if (!matchedKeywords.find(m => m.keyword === keyword)) {
+            matchedKeywords.push({ keyword, source: '内容' });
+          }
+        }
+      }
+
+      return {
+        _id: thought._id,
+        content: thought.content,
+        tags: tagNames,
+        isImportant: thought.isImportant,
+        createdAt: thought.createdAt,
+        score,
+        matchedKeywords,
+        isRecommended: score > 0
+      };
+    }).filter(t => t.score > 0).sort((a, b) => b.score - a.score).slice(0, 20);
+
+    res.json({
+      success: true,
+      data: {
+        keywords,
+        meetings: scoredMeetings,
+        thoughts: scoredThoughts,
+        recommendedMeetingIds: scoredMeetings.filter(m => m.isRecommended).map(m => m._id)
+      }
+    });
+  } catch (error) {
+    console.error('获取相关会议失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取相关会议失败',
+      error: error.message
+    });
+  }
+};
+
+// 使用选中的会议进行复盘
+exports.reviewPlanItemWithSelection = async (req, res) => {
+  try {
+    const { month, itemId } = req.params;
+    const { selectedMeetingIds } = req.body;
+
+    const plan = await MonthlyPlan.findOne({ month });
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: '月度计划不存在'
+      });
+    }
+
+    const item = plan.items.id(itemId);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: '计划项目不存在'
+      });
+    }
+
+    // 计算月份的开始和结束时间
+    const startDate = new Date(`${month}-01T00:00:00.000Z`);
+    const endDate = new Date(startDate);
+    endDate.setUTCMonth(endDate.getUTCMonth() + 1);
+
+    // 获取用户选中的会议（包含完整内容）
+    let meetings = [];
+    if (selectedMeetingIds && selectedMeetingIds.length > 0) {
+      meetings = await MeetingMinutes.find({
+        _id: { $in: selectedMeetingIds }
+      }).lean();
+
+      // 为每个会议获取关联的思考
+      for (const meeting of meetings) {
+        const meetingThoughts = await Thought.find({ meetingMinutesId: meeting._id }).populate('tags').lean();
+        meeting.thoughts = meetingThoughts;
+      }
+
+      console.log(`[复盘] 用户选择了 ${meetings.length} 个会议进行复盘`);
+    } else {
+      console.log(`[复盘] 用户未选择会议，将使用智能检索`);
+
+      // 如果用户没有选择，使用智能检索
+      const allMeetings = await MeetingMinutes.find({
+        processStatus: 'completed',
+        meetingDate: { $gte: startDate, $lt: endDate }
+      }).lean();
+
+      for (const meeting of allMeetings) {
+        const meetingThoughts = await Thought.find({ meetingMinutesId: meeting._id }).populate('tags').lean();
+        meeting.thoughts = meetingThoughts;
+      }
+
+      meetings = allMeetings;
+    }
+
+    // 获取该月的灵感/思考
+    const thoughts = await Thought.find({
+      isMerged: false,
+      createdAt: { $gte: startDate, $lt: endDate }
+    }).populate('tags').lean();
+
+    // 调用 AI 服务进行复盘（使用改进版）
+    const reviewResult = await reviewService.reviewPlanItemWithContext(
+      item,
+      meetings,
+      thoughts,
+      selectedMeetingIds && selectedMeetingIds.length > 0
+    );
+
+    // 保存复盘结果
+    item.review = reviewResult;
+    await plan.save();
+
+    res.json({
+      success: true,
+      data: {
+        item,
+        review: reviewResult
+      }
+    });
+  } catch (error) {
+    console.error('复盘失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '复盘失败',
+      error: error.message
+    });
+  }
+};
+
+// 提取关键词的辅助函数
+function extractKeywords(text) {
+  const keywords = [];
+
+  // 提取英文单词（至少2个字符）
+  const englishWords = text.match(/[a-zA-Z]{2,}/g) || [];
+  keywords.push(...englishWords.map(w => w.toLowerCase()));
+
+  // 常见的业务关键词
+  const businessKeywords = [
+    '产品', '设计', '教育', '游戏', 'AI', '人工智能', '用户', '体验',
+    '战略', '品牌', '市场', '运营', '技术', '开发', '测试', '上线',
+    '优化', '迭代', '需求', '功能', '模块', '系统', '平台', '工具',
+    'OpenCue', 'OpenQuest', 'Cube', '任运', '任小喵', 'AIMV',
+    '组织', '团队', '管理', '培训', '招聘', '绩效', '目标', 'OKR', 'KPI',
+    '创意', '内容', '视频', '音乐', '美术', '动画', '3D', '2D',
+    '数据', '分析', '指标', '增长', '转化', '留存', '活跃',
+    '商业', '模式', '盈利', '成本', '收入', '投资', '融资',
+    'RPG', '故事', '讲故事', '角色扮演', '叙事', '剧情', '互动',
+    '课程', '学习', '教学', '老师', '学生', '知识', '能力'
+  ];
+
+  for (const keyword of businessKeywords) {
+    if (text.includes(keyword)) {
+      keywords.push(keyword);
+    }
+  }
+
+  // 去重
+  return [...new Set(keywords)];
+}

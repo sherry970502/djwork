@@ -32,6 +32,12 @@ router.post('/:month/migrate', monthlyPlanController.batchMigrateItems);
 // AI 复盘单个项目
 router.post('/:month/items/:itemId/review', monthlyPlanController.reviewPlanItem);
 
+// 获取计划项目的相关会议（智能检索）
+router.get('/:month/items/:itemId/related-meetings', monthlyPlanController.getRelatedMeetingsForItem);
+
+// 使用选中的会议进行复盘
+router.post('/:month/items/:itemId/review-with-selection', monthlyPlanController.reviewPlanItemWithSelection);
+
 // AI 复盘整个月度计划
 router.post('/:month/review', monthlyPlanController.reviewMonthlyPlan);
 

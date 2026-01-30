@@ -172,6 +172,136 @@ ${thoughtsContext || '【无灵感记录】'}
   }
 
   /**
+   * 复盘单个计划项目（改进版 - 支持用户选择会议）
+   */
+  async reviewPlanItemWithContext(item, meetings, thoughts, userSelected = false) {
+    console.log(`Reviewing plan item: ${item.title} (用户选择模式: ${userSelected})`);
+
+    // 准备会议纪要上下文（如果是用户选择的，提供更详细的内容）
+    const meetingsContext = meetings.map(m => {
+      const thoughtsText = m.thoughts?.map(t => {
+        const tags = t.tags?.map(tag => tag.displayName || tag.name).join(', ') || '';
+        return `  - ${t.content} [标签: ${tags}]`;
+      }).join('\n') || '';
+
+      // 如果是用户选择的会议，提供完整内容
+      const contentPreview = userSelected
+        ? (m.content || '无内容')
+        : (m.content?.substring(0, 800) || '无内容');
+
+      return `【${m.title}】(${new Date(m.meetingDate).toLocaleDateString('zh-CN')})
+会议内容:
+${contentPreview}
+
+提取的灵感思考:
+${thoughtsText || '  (无)'}`;
+    }).join('\n\n---\n\n');
+
+    // 准备灵感/思考上下文
+    const thoughtsContext = thoughts.slice(0, 30).map(t => {
+      const tags = t.tags?.map(tag => tag.displayName || tag.name).join(', ') || '';
+      return `- ${t.content} [标签: ${tags}]${t.isImportant ? ' ⭐重要' : ''}`;
+    }).join('\n');
+
+    // 获取迁移信息
+    const migrationInfo = item.migration ?
+      `\n版本: v${item.migration.version}.0\n从 ${item.migration.fromMonth} 迁移而来\n上月情况: ${item.migration.inheritedContext || '无'}` : '';
+
+    const selectionNote = userSelected
+      ? `\n\n【重要】用户已明确选择了 ${meetings.length} 个相关会议，请仔细分析这些会议中与计划项目相关的讨论内容。`
+      : '';
+
+    const prompt = `你是一个月度工作复盘助手。请根据会议纪要和灵感记录，评估计划项目的完成情况。
+
+## 待复盘的计划项目
+标题: ${item.title}
+描述: ${item.description || '无详细描述'}
+类型: ${item.sourceType === 'task' ? '组织事务' : item.sourceType === 'migrated' ? '从上月迁移' : '推荐议题'}
+优先级: ${item.priority}${migrationInfo}${selectionNote}
+
+## 本月会议纪要 (共 ${meetings.length} 个)
+${meetingsContext || '【本月无会议纪要】'}
+
+## 本月灵感与思考 (共 ${thoughts.length} 条)
+${thoughtsContext || '【本月无灵感记录】'}
+
+## 分析任务
+
+请分析上述会议和灵感中与计划项目的相关性，评估完成情况：
+
+1. **相关会议分析**: 从会议纪要中找出与计划项目相关的讨论，提取关键结论
+2. **相关灵感分析**: 从灵感记录中找出与计划项目相关的思考
+3. **完成度评估**:
+   - completed: 有明确的讨论和结论，取得实质性进展
+   - partial: 有相关讨论或思考，但尚未取得完整成果
+   - in_progress: 有初步讨论或思考，正在推进中
+   - not_started: 本月没有任何相关讨论或思考
+4. **差距分析**: 指出还缺少什么
+5. **下月建议**: 给出具体的后续行动建议
+
+## 输出格式（JSON）
+{
+  "meetingOutcomes": [
+    {
+      "meetingTitle": "会议标题",
+      "relatedContent": "与计划项目相关的具体讨论内容摘要",
+      "conclusions": ["结论1", "结论2"]
+    }
+  ],
+  "relatedThoughts": [
+    {
+      "content": "相关灵感内容",
+      "relevance": "与计划项目的关联说明"
+    }
+  ],
+  "completionStatus": "completed|partial|in_progress|not_started",
+  "completionReason": "完成度评估的依据说明",
+  "progressHighlights": ["进展亮点1", "进展亮点2"],
+  "gaps": [
+    {
+      "dimension": "缺漏维度",
+      "description": "具体缺少什么",
+      "suggestion": "建议如何补充"
+    }
+  ],
+  "actionRecommendations": [
+    {
+      "action": "carry_over|close|split|merge",
+      "reason": "建议原因",
+      "priority": "high|medium|low"
+    }
+  ],
+  "nextMonthFocus": "下月应该重点关注的方向",
+  "summary": "100字左右的复盘总结"
+}
+
+只输出 JSON，不要有其他内容。`;
+
+    try {
+      const response = await this.callClaudeAPI([{ role: 'user', content: prompt }], 4096);
+      const result = this.parseJsonResponse(response.content[0].text);
+
+      return {
+        ...result,
+        userSelectedMeetings: userSelected,
+        analyzedMeetingCount: meetings.length,
+        reviewedAt: new Date()
+      };
+    } catch (error) {
+      console.error('Review failed:', error);
+      return {
+        meetingOutcomes: [],
+        relatedThoughts: [],
+        completionStatus: 'unclear',
+        completionReason: `复盘分析失败: ${error.message}`,
+        gaps: [],
+        summary: '复盘分析失败，请重试',
+        reviewedAt: new Date()
+      };
+    }
+  }
+
+  /**
    * 生成月度总结
    */
   async generateMonthlySummary(plan, meetings, thoughts) {
