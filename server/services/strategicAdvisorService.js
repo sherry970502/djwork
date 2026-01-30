@@ -1,6 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const config = require('../config');
-const { Thought } = require('../models');
+const { Thought, Tag } = require('../models');
 
 class StrategicAdvisorService {
   constructor() {
@@ -64,21 +64,138 @@ class StrategicAdvisorService {
   }
 
   /**
-   * 从知识库中查找相关思考
+   * 从知识库中查找相关思考 - 增强版
+   * 支持按标签和关键词检索
    */
   async findRelatedThoughts(query, limit = 10) {
+    console.log(`[知识库检索] 查询: "${query}"`);
+
+    // 1. 提取关键词（中文分词 + 英文单词）
+    const keywords = this.extractKeywords(query);
+    console.log(`[知识库检索] 提取关键词: ${keywords.join(', ')}`);
+
+    // 2. 查找匹配的标签（通过 displayName、name 或 keywords 匹配）
+    const matchedTags = await Tag.find({
+      $or: [
+        { displayName: { $in: keywords.map(k => new RegExp(k, 'i')) } },
+        { name: { $in: keywords.map(k => new RegExp(k, 'i')) } },
+        { keywords: { $in: keywords.map(k => new RegExp(k, 'i')) } }
+      ]
+    });
+
+    const tagIds = matchedTags.map(t => t._id);
+    console.log(`[知识库检索] 匹配到 ${matchedTags.length} 个标签: ${matchedTags.map(t => t.displayName).join(', ')}`);
+
+    // 3. 构建查询条件
+    const queryConditions = [];
+
+    // 3.1 按标签查找（优先级最高）
+    if (tagIds.length > 0) {
+      queryConditions.push({ tags: { $in: tagIds } });
+    }
+
+    // 3.2 按关键词在内容中查找
+    for (const keyword of keywords) {
+      if (keyword.length >= 2) {  // 至少2个字符才搜索
+        queryConditions.push({ content: { $regex: keyword, $options: 'i' } });
+      }
+    }
+
+    // 如果没有任何查询条件，返回空数组
+    if (queryConditions.length === 0) {
+      console.log(`[知识库检索] 没有有效的查询条件`);
+      return [];
+    }
+
+    // 4. 执行查询
     const thoughts = await Thought.find({
       isMerged: false,
-      $or: [
-        { content: { $regex: query.split('').join('.*'), $options: 'i' } },
-        { content: { $regex: query.substring(0, 10), $options: 'i' } }
-      ]
+      $or: queryConditions
     })
     .populate('tags')
     .sort({ isImportant: -1, createdAt: -1 })
-    .limit(limit);
+    .limit(limit * 2);  // 多获取一些，后面去重
 
-    return thoughts;
+    // 5. 按相关性排序（标签匹配的优先）
+    const scoredThoughts = thoughts.map(thought => {
+      let score = 0;
+
+      // 标签匹配得分
+      const thoughtTagIds = thought.tags.map(t => t._id.toString());
+      const matchingTagCount = tagIds.filter(id => thoughtTagIds.includes(id.toString())).length;
+      score += matchingTagCount * 10;
+
+      // 关键词匹配得分
+      for (const keyword of keywords) {
+        if (thought.content.toLowerCase().includes(keyword.toLowerCase())) {
+          score += 3;
+        }
+      }
+
+      // 重要标记加分
+      if (thought.isImportant) {
+        score += 5;
+      }
+
+      return { thought, score };
+    });
+
+    // 按得分排序并去重
+    scoredThoughts.sort((a, b) => b.score - a.score);
+    const uniqueThoughts = [];
+    const seenIds = new Set();
+
+    for (const { thought, score } of scoredThoughts) {
+      if (!seenIds.has(thought._id.toString()) && uniqueThoughts.length < limit) {
+        seenIds.add(thought._id.toString());
+        uniqueThoughts.push(thought);
+      }
+    }
+
+    console.log(`[知识库检索] 最终返回 ${uniqueThoughts.length} 条相关灵感`);
+    return uniqueThoughts;
+  }
+
+  /**
+   * 从文本中提取关键词
+   */
+  extractKeywords(text) {
+    const keywords = [];
+
+    // 1. 提取英文单词（至少2个字符）
+    const englishWords = text.match(/[a-zA-Z]{2,}/g) || [];
+    keywords.push(...englishWords.map(w => w.toLowerCase()));
+
+    // 2. 提取中文词汇（简单的基于常见词的分词）
+    // 常见的业务关键词
+    const businessKeywords = [
+      '产品', '设计', '教育', '游戏', 'AI', '人工智能', '用户', '体验',
+      '战略', '品牌', '市场', '运营', '技术', '开发', '测试', '上线',
+      '优化', '迭代', '需求', '功能', '模块', '系统', '平台', '工具',
+      'OpenCue', 'OpenQuest', 'Cube', '任运', '任小喵', 'AIMV',
+      '组织', '团队', '管理', '培训', '招聘', '绩效', '目标', 'OKR', 'KPI',
+      '创意', '内容', '视频', '音乐', '美术', '动画', '3D', '2D',
+      '数据', '分析', '指标', '增长', '转化', '留存', '活跃',
+      '商业', '模式', '盈利', '成本', '收入', '投资', '融资'
+    ];
+
+    for (const keyword of businessKeywords) {
+      if (text.includes(keyword)) {
+        keywords.push(keyword);
+      }
+    }
+
+    // 3. 提取引号内的内容
+    const quotedMatches = text.match(/["'"']([^"'"']+)["'"']/g) || [];
+    for (const match of quotedMatches) {
+      const content = match.replace(/["'"']/g, '').trim();
+      if (content.length >= 2) {
+        keywords.push(content);
+      }
+    }
+
+    // 4. 去重
+    return [...new Set(keywords)];
   }
 
   /**
