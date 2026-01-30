@@ -1,49 +1,27 @@
-const { execSync } = require('child_process');
+const Anthropic = require('@anthropic-ai/sdk');
 const config = require('../config');
 
 class ClaudeService {
   constructor() {
-    this.apiKey = config.claudeApiKey;
+    this.client = new Anthropic({
+      apiKey: config.claudeApiKey
+    });
     this.model = 'claude-3-haiku-20240307';
   }
 
   /**
-   * Call Claude API using curl command
+   * Call Claude API using official SDK
    */
   async callClaudeAPI(messages, maxTokens = 4096) {
-    const payload = JSON.stringify({
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: messages
-    });
-
-    // Escape the payload for shell
-    const escapedPayload = payload.replace(/'/g, "'\\''");
-
-    const curlCommand = `/usr/bin/curl -s https://api.anthropic.com/v1/messages \
-      -H "Content-Type: application/json" \
-      -H "x-api-key: ${this.apiKey}" \
-      -H "anthropic-version: 2023-06-01" \
-      -d '${escapedPayload}'`;
-
     try {
-      const result = execSync(curlCommand, {
-        encoding: 'utf-8',
-        maxBuffer: 10 * 1024 * 1024,
-        timeout: 120000
+      const response = await this.client.messages.create({
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: messages
       });
-
-      const response = JSON.parse(result);
-
-      if (response.error) {
-        throw new Error(`${response.error.type}: ${response.error.message}`);
-      }
 
       return response;
     } catch (error) {
-      if (error.message.includes(':')) {
-        throw error;
-      }
       throw new Error(`API call failed: ${error.message}`);
     }
   }
