@@ -362,7 +362,6 @@ const MonthlyPlanPage: React.FC = () => {
       key: 'project',
       width: 120,
       render: (project: string, record: any) => {
-        const p = projectLabels[project] || projectLabels.other;
         return (
           <Select
             value={project || 'other'}
@@ -1214,7 +1213,7 @@ const MonthlyPlanPage: React.FC = () => {
 
         <Form layout="vertical">
           <Form.Item>
-            <Radio.Group defaultValue={false} onChange={(e) => {
+            <Radio.Group defaultValue={false} onChange={() => {
               // 可以在这里处理升级选项
             }}>
               <Space direction="vertical">
