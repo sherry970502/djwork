@@ -1,48 +1,30 @@
-const { execSync } = require('child_process');
+const Anthropic = require('@anthropic-ai/sdk');
 const config = require('../config');
 
 class CreativeService {
   constructor() {
-    this.apiKey = config.claudeApiKey;
+    this.client = new Anthropic({
+      apiKey: config.claudeApiKey
+    });
     this.model = 'claude-3-haiku-20240307';
   }
 
   async callClaudeAPI(messages, maxTokens = 4096, retries = 3) {
-    const payload = JSON.stringify({
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: messages
-    });
-
-    const escapedPayload = payload.replace(/'/g, "'\\''");
-
-    const curlCommand = `/usr/bin/curl -s https://api.anthropic.com/v1/messages \
-      -H "Content-Type: application/json" \
-      -H "x-api-key: ${this.apiKey}" \
-      -H "anthropic-version: 2023-06-01" \
-      -d '${escapedPayload}'`;
-
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const result = execSync(curlCommand, {
-          encoding: 'utf-8',
-          maxBuffer: 10 * 1024 * 1024,
-          timeout: 180000
+        const response = await this.client.messages.create({
+          model: this.model,
+          max_tokens: maxTokens,
+          messages: messages
         });
-
-        const response = JSON.parse(result);
-
-        if (response.error) {
-          if (response.error.type === 'overloaded_error' && attempt < retries) {
-            console.log(`API overloaded, waiting ${attempt * 5}s...`);
-            await new Promise(resolve => setTimeout(resolve, attempt * 5000));
-            continue;
-          }
-          throw new Error(`${response.error.type}: ${response.error.message}`);
-        }
 
         return response;
       } catch (error) {
+        if (error.status === 529 && attempt < retries) {
+          console.log(`API overloaded, waiting ${attempt * 5}s...`);
+          await new Promise(resolve => setTimeout(resolve, attempt * 5000));
+          continue;
+        }
         if (attempt === retries) {
           throw new Error(`API call failed: ${error.message}`);
         }
