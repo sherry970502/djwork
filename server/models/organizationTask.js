@@ -98,6 +98,18 @@ const organizationTaskSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // DJ 角色推荐
+  djRole: {
+    type: String,
+    enum: ['manager', 'lead_designer', 'mentor', 'expert', 'unknown'],
+    default: 'unknown'
+  },
+  djRoleLabel: {
+    type: String  // 中文标签：管理者、主设计师、指导设计师、专家
+  },
+  djRoleReason: {
+    type: String  // AI 推荐理由
+  },
   analysis: analysisSchema,
   createdAt: {
     type: Date,

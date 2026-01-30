@@ -67,6 +67,15 @@ const statusMap: Record<string, { color: string; text: string }> = {
   archived: { color: 'default', text: '已归档' }
 };
 
+// DJ 角色映射
+const djRoleMap: Record<string, { color: string; text: string; icon: string }> = {
+  manager: { color: 'red', text: '管理者', icon: '👔' },
+  lead_designer: { color: 'blue', text: '主设计师', icon: '🎨' },
+  mentor: { color: 'purple', text: '指导设计师', icon: '🎓' },
+  expert: { color: 'green', text: '专家', icon: '✅' },
+  unknown: { color: 'default', text: '待分析', icon: '⏳' }
+};
+
 const TasksPage: React.FC = () => {
   const [tasks, setTasks] = useState<OrganizationTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -179,6 +188,20 @@ const TasksPage: React.FC = () => {
       render: category => {
         const { color, text } = categoryMap[category] || categoryMap.unknown;
         return <Tag color={color}>{text}</Tag>;
+      }
+    },
+    {
+      title: 'DJ角色',
+      dataIndex: 'djRole',
+      key: 'djRole',
+      width: 130,
+      render: (djRole, record: OrganizationTask) => {
+        const role = djRoleMap[djRole || 'unknown'] || djRoleMap.unknown;
+        return (
+          <Tag color={role.color} title={record.djRoleReason}>
+            {role.icon} {record.djRoleLabel || role.text}
+          </Tag>
+        );
       }
     },
     {
@@ -383,10 +406,15 @@ const TasksPage: React.FC = () => {
               <Title level={4} style={{ color: '#fff', margin: 0, marginBottom: 12 }}>
                 {selectedTask.title}
               </Title>
-              <Space size={16}>
+              <Space size={16} wrap>
                 <Tag style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }}>
                   {categoryMap[selectedTask.category]?.text || '待分类'}
                 </Tag>
+                {selectedTask.djRole && selectedTask.djRole !== 'unknown' && (
+                  <Tag style={{ background: 'rgba(255,255,255,0.3)', color: '#fff', border: 'none', fontWeight: 600 }}>
+                    {djRoleMap[selectedTask.djRole]?.icon} DJ角色: {selectedTask.djRoleLabel}
+                  </Tag>
+                )}
                 <Tag style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }}>
                   {statusMap[selectedTask.status].text}
                 </Tag>
@@ -397,6 +425,11 @@ const TasksPage: React.FC = () => {
                   来源: {selectedTask.source}
                 </Text>
               </Space>
+              {selectedTask.djRoleReason && (
+                <div style={{ marginTop: 8, fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+                  💡 AI推荐理由: {selectedTask.djRoleReason}
+                </div>
+              )}
             </div>
 
             {/* Content */}

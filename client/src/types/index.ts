@@ -132,6 +132,10 @@ export interface OrganizationTask {
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'analyzing' | 'completed' | 'archived';
   dueDate?: string;
+  // DJ 角色
+  djRole?: 'manager' | 'lead_designer' | 'mentor' | 'expert' | 'unknown';
+  djRoleLabel?: string;
+  djRoleReason?: string;
   analysis?: TaskAnalysis;
   createdAt: string;
   updatedAt: string;
