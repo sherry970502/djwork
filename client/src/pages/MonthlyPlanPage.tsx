@@ -1436,8 +1436,10 @@ const MonthlyPlanPage: React.FC = () => {
                           {meeting.matchedKeywords?.length > 0 && (
                             <div style={{ marginTop: 8 }}>
                               <span style={{ color: '#666', fontSize: 12 }}>匹配关键词: </span>
-                              {meeting.matchedKeywords.map((kw: string, i: number) => (
-                                <Tag key={i} color="blue" style={{ fontSize: 11 }}>{kw}</Tag>
+                              {meeting.matchedKeywords.map((kw: any, i: number) => (
+                                <Tag key={i} color="blue" style={{ fontSize: 11 }}>
+                                  {typeof kw === 'string' ? kw : kw.keyword}
+                                </Tag>
                               ))}
                             </div>
                           )}
