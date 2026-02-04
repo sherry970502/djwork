@@ -21,9 +21,14 @@ export interface Thought {
   _id: string;
   meetingMinutesId: string | MeetingMinutes;
   content: string;
+  contentType?: 'TODO' | 'CONCLUSION' | 'QUESTION' | 'IDEA' | 'DECISION' | 'OBSERVATION' | 'REFERENCE';
+  speaker?: string;
+  originalQuote?: string;
+  context?: string;
   originalSegment: string;
   tags: Tag[];
   confidence: number;
+  extractionVersion?: number;
   embedding: number[];
   similarThoughts: SimilarThought[];
   isImportant: boolean;

@@ -5,12 +5,30 @@ import {
   StarFilled,
   EditOutlined,
   DeleteOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  CheckCircleOutlined,
+  BulbOutlined,
+  QuestionCircleOutlined,
+  TrophyOutlined,
+  EyeOutlined,
+  UserOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Thought, MeetingMinutes } from '../types';
 
 const { Paragraph, Text } = Typography;
+
+// 内容类型配置
+const contentTypeConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  TODO: { label: '待办', color: 'red', icon: <CheckCircleOutlined /> },
+  CONCLUSION: { label: '结论', color: 'green', icon: <TrophyOutlined /> },
+  DECISION: { label: '决策', color: 'blue', icon: <CheckCircleOutlined /> },
+  QUESTION: { label: '问题', color: 'orange', icon: <QuestionCircleOutlined /> },
+  IDEA: { label: '想法', color: 'purple', icon: <BulbOutlined /> },
+  OBSERVATION: { label: '观察', color: 'cyan', icon: <EyeOutlined /> },
+  REFERENCE: { label: '参考', color: 'default', icon: <TeamOutlined /> }
+};
 
 interface ThoughtCardProps {
   thought: Thought;
@@ -75,11 +93,38 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
     >
       <div style={{ marginBottom: 12 }}>
         <Space wrap>
+          {/* 内容类型标签 */}
+          {thought.contentType && contentTypeConfig[thought.contentType] && (
+            <Tag
+              color={contentTypeConfig[thought.contentType].color}
+              icon={contentTypeConfig[thought.contentType].icon}
+            >
+              {contentTypeConfig[thought.contentType].label}
+            </Tag>
+          )}
+
+          {/* 说话人标签 */}
+          {thought.speaker && (
+            <Tag
+              icon={<UserOutlined />}
+              color={thought.speaker === 'DJ' ? 'gold' : 'geekblue'}
+            >
+              {thought.speaker}
+            </Tag>
+          )}
+
+          {/* 提取版本标签（V2新提取） */}
+          {thought.extractionVersion === 2 && (
+            <Tag color="success">V2</Tag>
+          )}
+
+          {/* 业务标签 */}
           {thought.tags.map(tag => (
             <Tag key={tag._id} color={tag.color}>
               {tag.displayName}
             </Tag>
           ))}
+
           {thought.isImportant && (
             <Tag color="red" className="important-badge">
               重要
@@ -95,7 +140,8 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
         {thought.content}
       </Paragraph>
 
-      {thought.originalSegment && (
+      {/* 优先显示新的 originalQuote，如果没有则显示旧的 originalSegment */}
+      {(thought.originalQuote || thought.originalSegment) && (
         <div
           style={{
             background: '#f5f5f5',
@@ -105,14 +151,36 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
           }}
         >
           <Text type="secondary" style={{ fontSize: 12 }}>
-            原文引用：
+            📄 原文引用：
           </Text>
           <Paragraph
             type="secondary"
             style={{ marginBottom: 0, fontSize: 13 }}
-            ellipsis={{ rows: 2 }}
+            ellipsis={{ rows: 2, expandable: true, symbol: '展开' }}
           >
-            {thought.originalSegment}
+            {thought.originalQuote || thought.originalSegment}
+          </Paragraph>
+        </div>
+      )}
+
+      {/* 上下文补充 */}
+      {thought.context && (
+        <div
+          style={{
+            background: '#e6f7ff',
+            padding: '8px 12px',
+            borderRadius: 4,
+            marginBottom: 12,
+            borderLeft: '3px solid #1890ff'
+          }}
+        >
+          <Text style={{ fontSize: 12, color: '#1890ff' }}>
+            💡 上下文：
+          </Text>
+          <Paragraph
+            style={{ marginBottom: 0, fontSize: 13, color: '#096dd9' }}
+          >
+            {thought.context}
           </Paragraph>
         </div>
       )}
