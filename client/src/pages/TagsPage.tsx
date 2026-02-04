@@ -28,11 +28,12 @@ import {
   HistoryOutlined,
   CalendarOutlined,
   BulbOutlined,
-  StarOutlined
+  StarOutlined,
+  SettingOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Color } from 'antd/es/color-picker';
-import { getTags, createTag, updateTag, deleteTag, getTagStats, findTagMatches, applyTagToHistory } from '../services/api';
+import { getTags, createTag, updateTag, deleteTag, getTagStats, findTagMatches, applyTagToHistory, getAppliedThoughts, batchRemoveTag } from '../services/api';
 import type { Tag as TagType, TagStats } from '../types';
 
 const { Title } = Typography;
@@ -53,8 +54,16 @@ const TagsPage: React.FC = () => {
   const [matchedThoughts, setMatchedThoughts] = useState<any[]>([]);
   const [selectedMeetingIds, setSelectedMeetingIds] = useState<string[]>([]);
   const [selectedThoughtIds, setSelectedThoughtIds] = useState<string[]>([]);
-  const [applyToMeetingThoughts, setApplyToMeetingThoughts] = useState(true);
+  const [applyToMeetingThoughts, setApplyToMeetingThoughts] = useState(false); // 默认不勾选
   const [applying, setApplying] = useState(false);
+
+  // 管理已应用内容相关状态
+  const [manageModalOpen, setManageModalOpen] = useState(false);
+  const [managingTag, setManagingTag] = useState<TagType | null>(null);
+  const [loadingApplied, setLoadingApplied] = useState(false);
+  const [appliedThoughts, setAppliedThoughts] = useState<any[]>([]);
+  const [selectedRemoveIds, setSelectedRemoveIds] = useState<string[]>([]);
+  const [removing, setRemoving] = useState(false);
 
   const fetchTags = async () => {
     setLoading(true);
@@ -206,6 +215,54 @@ const TagsPage: React.FC = () => {
     }
   };
 
+  // 打开管理已应用内容对话框
+  const handleOpenManageModal = async (tag: TagType) => {
+    setManagingTag(tag);
+    setManageModalOpen(true);
+    setAppliedThoughts([]);
+    setSelectedRemoveIds([]);
+    setLoadingApplied(true);
+
+    try {
+      const res = await getAppliedThoughts(tag._id);
+      if (res.success) {
+        setAppliedThoughts(res.data.groupedByMeeting || []);
+        if (res.data.totalThoughts === 0) {
+          message.info('该标签还未应用到任何灵感');
+        }
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || '获取已应用内容失败');
+    } finally {
+      setLoadingApplied(false);
+    }
+  };
+
+  // 批量移除标签
+  const handleRemoveTag = async () => {
+    if (!managingTag) return;
+
+    if (selectedRemoveIds.length === 0) {
+      message.warning('请至少选择一条灵感');
+      return;
+    }
+
+    setRemoving(true);
+    try {
+      const res = await batchRemoveTag(managingTag._id, selectedRemoveIds);
+      if (res.success) {
+        message.success(res.message || '移除成功');
+        // 刷新列表
+        handleOpenManageModal(managingTag);
+        fetchTags(); // 刷新标签统计
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || '移除失败');
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   // Merge tags with stats
   const tagsWithStats = tags.map(tag => {
     const stat = stats.find(s => s._id === tag._id);
@@ -276,7 +333,7 @@ const TagsPage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 220,
+      width: 300,
       render: (_, record) => (
         <Space size="small">
           <Button
@@ -292,9 +349,20 @@ const TagsPage: React.FC = () => {
             size="small"
             icon={<HistoryOutlined />}
             onClick={() => handleOpenMatchModal(record)}
-            disabled={!record.keywords || record.keywords.length === 0}
+            style={{
+              color: (!record.keywords || record.keywords.length === 0) ? '#d9d9d9' : undefined
+            }}
           >
             应用到历史
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<SettingOutlined />}
+            onClick={() => handleOpenManageModal(record)}
+            disabled={!record.thoughtCount || record.thoughtCount === 0}
+          >
+            管理已应用
           </Button>
           {!record.isPreset && (
             <Popconfirm
@@ -635,6 +703,167 @@ const TagsPage: React.FC = () => {
                   <Alert
                     message="未找到匹配内容"
                     description="没有找到包含指定关键词的会议或灵感。您可以尝试调整标签的关键词。"
+                    type="info"
+                    showIcon
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* 管理已应用内容对话框 */}
+      <Modal
+        title={
+          <Space>
+            <SettingOutlined />
+            管理标签「{managingTag?.displayName}」的应用范围
+          </Space>
+        }
+        open={manageModalOpen}
+        onCancel={() => setManageModalOpen(false)}
+        width={900}
+        footer={[
+          <Button key="cancel" onClick={() => setManageModalOpen(false)}>
+            关闭
+          </Button>,
+          <Button
+            key="remove"
+            danger
+            type="primary"
+            loading={removing}
+            disabled={selectedRemoveIds.length === 0}
+            onClick={handleRemoveTag}
+          >
+            移除选中项的标签 ({selectedRemoveIds.length})
+          </Button>
+        ]}
+      >
+        {managingTag && (
+          <div>
+            {loadingApplied ? (
+              <div style={{ textAlign: 'center', padding: 40 }}>
+                <Spin tip="正在加载已应用的灵感..." />
+              </div>
+            ) : (
+              <div>
+                {appliedThoughts.length > 0 ? (
+                  <div>
+                    <Alert
+                      message={`当前标签已应用到 ${appliedThoughts.reduce((sum, m) => sum + m.thoughts.length, 0)} 条灵感`}
+                      type="info"
+                      style={{ marginBottom: 16 }}
+                      showIcon
+                    />
+
+                    <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
+                      <span><strong>按会议分组</strong></span>
+                      <Space>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            const allIds = appliedThoughts.flatMap(m => m.thoughts.map((t: any) => t._id));
+                            setSelectedRemoveIds(allIds);
+                          }}
+                        >
+                          全选
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() => setSelectedRemoveIds([])}
+                        >
+                          清空
+                        </Button>
+                      </Space>
+                    </div>
+
+                    <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+                      {appliedThoughts.map((meeting: any) => (
+                        <div key={meeting.meetingId} style={{ marginBottom: 16 }}>
+                          <div style={{
+                            background: '#fafafa',
+                            padding: '8px 12px',
+                            borderRadius: 4,
+                            marginBottom: 8,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <Space>
+                              <CalendarOutlined />
+                              <strong>{meeting.meetingTitle}</strong>
+                              <span style={{ color: '#999', fontSize: 12 }}>
+                                {new Date(meeting.meetingDate).toLocaleDateString('zh-CN')}
+                              </span>
+                              <Badge count={meeting.thoughts.length} style={{ backgroundColor: '#1890ff' }} />
+                            </Space>
+                            <Space>
+                              <Button
+                                size="small"
+                                onClick={() => {
+                                  const meetingThoughtIds = meeting.thoughts.map((t: any) => t._id);
+                                  const allSelected = meetingThoughtIds.every((id: string) => selectedRemoveIds.includes(id));
+                                  if (allSelected) {
+                                    setSelectedRemoveIds(selectedRemoveIds.filter(id => !meetingThoughtIds.includes(id)));
+                                  } else {
+                                    setSelectedRemoveIds([...new Set([...selectedRemoveIds, ...meetingThoughtIds])]);
+                                  }
+                                }}
+                              >
+                                {meeting.thoughts.every((t: any) => selectedRemoveIds.includes(t._id)) ? '取消全选' : '全选此会议'}
+                              </Button>
+                            </Space>
+                          </div>
+
+                          <Checkbox.Group
+                            value={selectedRemoveIds}
+                            onChange={(values) => setSelectedRemoveIds(values as string[])}
+                            style={{ width: '100%' }}
+                          >
+                            <List
+                              dataSource={meeting.thoughts}
+                              renderItem={(thought: any) => (
+                                <List.Item
+                                  style={{
+                                    padding: 12,
+                                    background: selectedRemoveIds.includes(thought._id) ? '#fff2e8' : '#fff',
+                                    marginBottom: 4,
+                                    borderRadius: 4,
+                                    border: selectedRemoveIds.includes(thought._id) ? '1px solid #ff7a45' : '1px solid #f0f0f0'
+                                  }}
+                                >
+                                  <div style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                    <Checkbox value={thought._id} />
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ marginBottom: 4 }}>
+                                        {thought.isImportant && (
+                                          <StarOutlined style={{ color: '#faad14', marginRight: 4 }} />
+                                        )}
+                                        {thought.content}
+                                      </div>
+                                      <div>
+                                        <Space wrap>
+                                          {thought.tags.map((tag: any) => (
+                                            <Tag key={tag._id} color={tag.color}>
+                                              {tag.displayName}
+                                            </Tag>
+                                          ))}
+                                        </Space>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </List.Item>
+                              )}
+                            />
+                          </Checkbox.Group>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <Alert
+                    message="该标签还未应用到任何灵感"
                     type="info"
                     showIcon
                   />

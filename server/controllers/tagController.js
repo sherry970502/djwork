@@ -412,6 +412,130 @@ exports.applyTagToHistory = async (req, res) => {
   }
 };
 
+// Get all thoughts that have this tag applied
+exports.getAppliedThoughts = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const tag = await Tag.findById(id);
+    if (!tag) {
+      return res.status(404).json({
+        success: false,
+        message: '标签不存在'
+      });
+    }
+
+    const MeetingMinutes = require('../models/meetingMinutes');
+
+    // 查找所有包含该标签的灵感
+    const thoughts = await Thought.find({
+      tags: tag._id,
+      isMerged: false
+    })
+    .populate('tags', 'displayName color')
+    .populate('meetingMinutesId', 'title meetingDate')
+    .sort({ createdAt: -1 })
+    .lean();
+
+    // 按会议分组
+    const groupedByMeeting = {};
+
+    for (const thought of thoughts) {
+      const meetingId = thought.meetingMinutesId?._id?.toString() || 'unknown';
+      if (!groupedByMeeting[meetingId]) {
+        groupedByMeeting[meetingId] = {
+          meetingId,
+          meetingTitle: thought.meetingMinutesId?.title || '未知会议',
+          meetingDate: thought.meetingMinutesId?.meetingDate,
+          thoughts: []
+        };
+      }
+      groupedByMeeting[meetingId].thoughts.push({
+        _id: thought._id,
+        content: thought.content,
+        tags: thought.tags,
+        isImportant: thought.isImportant,
+        createdAt: thought.createdAt
+      });
+    }
+
+    // 转换为数组并排序
+    const groupedArray = Object.values(groupedByMeeting).sort((a, b) => {
+      return new Date(b.meetingDate) - new Date(a.meetingDate);
+    });
+
+    res.json({
+      success: true,
+      data: {
+        tag: {
+          _id: tag._id,
+          displayName: tag.displayName,
+          color: tag.color
+        },
+        totalThoughts: thoughts.length,
+        groupedByMeeting: groupedArray
+      }
+    });
+  } catch (error) {
+    console.error('获取已应用的灵感失败:', error);
+    res.status(500).json({
+      success: false,
+      message: `获取失败: ${error.message}`
+    });
+  }
+};
+
+// Batch remove tag from selected thoughts
+exports.batchRemoveTag = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { thoughtIds } = req.body;
+
+    if (!thoughtIds || thoughtIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '请至少选择一条灵感'
+      });
+    }
+
+    const tag = await Tag.findById(id);
+    if (!tag) {
+      return res.status(404).json({
+        success: false,
+        message: '标签不存在'
+      });
+    }
+
+    // 从选中的灵感中移除该标签
+    const result = await Thought.updateMany(
+      { _id: { $in: thoughtIds } },
+      { $pull: { tags: tag._id } }
+    );
+
+    console.log(`[移除标签] 从 ${result.modifiedCount} 条灵感中移除标签"${tag.displayName}"`);
+
+    // 更新标签的使用计数
+    const totalTaggedThoughts = await Thought.countDocuments({ tags: tag._id });
+    tag.thoughtCount = totalTaggedThoughts;
+    await tag.save();
+
+    res.json({
+      success: true,
+      data: {
+        removedCount: result.modifiedCount,
+        totalTaggedThoughts: tag.thoughtCount
+      },
+      message: `成功移除！已从 ${result.modifiedCount} 条灵感中移除标签`
+    });
+  } catch (error) {
+    console.error('移除标签失败:', error);
+    res.status(500).json({
+      success: false,
+      message: `移除失败: ${error.message}`
+    });
+  }
+};
+
 // Initialize preset tags
 exports.initPresetTags = async () => {
   try {

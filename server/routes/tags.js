@@ -20,10 +20,16 @@ router.put('/:id', tagController.updateTag);
 // DELETE /api/tags/:id - Delete tag
 router.delete('/:id', tagController.deleteTag);
 
-// POST /api/tags/:id/find-matches - Find matching content for tag
+// GET /api/tags/:id/find-matches - Find matching content for tag
 router.get('/:id/find-matches', tagController.findMatchingContent);
 
 // POST /api/tags/:id/apply-to-history - Apply tag to selected historical content
 router.post('/:id/apply-to-history', tagController.applyTagToHistory);
+
+// GET /api/tags/:id/applied-thoughts - Get all thoughts with this tag
+router.get('/:id/applied-thoughts', tagController.getAppliedThoughts);
+
+// POST /api/tags/:id/batch-remove - Batch remove tag from thoughts
+router.post('/:id/batch-remove', tagController.batchRemoveTag);
 
 module.exports = router;

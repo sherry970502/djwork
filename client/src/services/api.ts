@@ -157,6 +157,14 @@ export const applyTagToHistory = (tagId: string, data: {
 }) =>
   api.post<ApiResponse<any>>(`/tags/${tagId}/apply-to-history`, data).then(res => res.data);
 
+// 获取应用了该标签的所有灵感
+export const getAppliedThoughts = (tagId: string) =>
+  api.get<ApiResponse<any>>(`/tags/${tagId}/applied-thoughts`).then(res => res.data);
+
+// 批量移除标签
+export const batchRemoveTag = (tagId: string, thoughtIds: string[]) =>
+  api.post<ApiResponse<any>>(`/tags/${tagId}/batch-remove`, { thoughtIds }).then(res => res.data);
+
 // Tasks API (组织事务)
 export const getTasks = (params?: {
   page?: number;
