@@ -8,7 +8,6 @@ import {
   Modal,
   Form,
   Input,
-  Popconfirm,
   Typography,
   ColorPicker,
   Spin,
@@ -31,7 +30,6 @@ import {
   BulbOutlined,
   StarOutlined,
   SettingOutlined,
-  MoreOutlined,
   DownOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -339,7 +337,7 @@ const TagsPage: React.FC = () => {
       width: 120,
       fixed: 'right',
       render: (_, record) => {
-        const menuItems = [
+        const menuItems: any[] = [
           {
             key: 'edit',
             label: '编辑',
