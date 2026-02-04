@@ -19,7 +19,8 @@ import {
   Statistic,
   Row,
   Col,
-  Badge
+  Badge,
+  Dropdown
 } from 'antd';
 import {
   PlusOutlined,
@@ -29,7 +30,9 @@ import {
   CalendarOutlined,
   BulbOutlined,
   StarOutlined,
-  SettingOutlined
+  SettingOutlined,
+  MoreOutlined,
+  DownOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Color } from 'antd/es/color-picker';
@@ -333,52 +336,62 @@ const TagsPage: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 300,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
+      width: 120,
+      fixed: 'right',
+      render: (_, record) => {
+        const menuItems = [
+          {
+            key: 'edit',
+            label: '编辑',
+            icon: <EditOutlined />,
+            onClick: () => handleEdit(record)
+          },
+          {
+            key: 'apply',
+            label: '应用到历史',
+            icon: <HistoryOutlined />,
+            disabled: !record.keywords || record.keywords.length === 0,
+            onClick: () => handleOpenMatchModal(record)
+          },
+          {
+            key: 'manage',
+            label: '管理已应用',
+            icon: <SettingOutlined />,
+            disabled: !record.thoughtCount || record.thoughtCount === 0,
+            onClick: () => handleOpenManageModal(record)
+          }
+        ];
+
+        if (!record.isPreset) {
+          menuItems.push({
+            key: 'delete',
+            label: '删除',
+            icon: <DeleteOutlined />,
+            danger: true,
+            onClick: () => {
+              Modal.confirm({
+                title: '确定删除此标签吗？',
+                content: '关联的思考将移除此标签',
+                okText: '确定',
+                cancelText: '取消',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record._id)
+              });
+            }
+          });
+        }
+
+        return (
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={['click']}
           >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<HistoryOutlined />}
-            onClick={() => handleOpenMatchModal(record)}
-            style={{
-              color: (!record.keywords || record.keywords.length === 0) ? '#d9d9d9' : undefined
-            }}
-          >
-            应用到历史
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<SettingOutlined />}
-            onClick={() => handleOpenManageModal(record)}
-            disabled={!record.thoughtCount || record.thoughtCount === 0}
-          >
-            管理已应用
-          </Button>
-          {!record.isPreset && (
-            <Popconfirm
-              title="确定删除此标签吗？"
-              description="关联的思考将移除此标签"
-              onConfirm={() => handleDelete(record._id)}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
-            </Popconfirm>
-          )}
-        </Space>
-      )
+            <Button size="small">
+              操作 <DownOutlined />
+            </Button>
+          </Dropdown>
+        );
+      }
     }
   ];
 
