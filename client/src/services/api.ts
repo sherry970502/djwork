@@ -64,6 +64,13 @@ export const uploadMeeting = (formData: FormData) =>
 export const processMeeting = (id: string) =>
   api.post<ApiResponse<MeetingMinutes>>(`/meetings/${id}/process`).then(res => res.data);
 
+// 重新整理会议（使用改进的V2提取算法）
+export const reprocessMeeting = (id: string, options?: {
+  preserveManual?: boolean;
+  preserveMerged?: boolean;
+}) =>
+  api.post<ApiResponse<any>>(`/meetings/${id}/reprocess`, options).then(res => res.data);
+
 export const deleteMeeting = (id: string) =>
   api.delete<ApiResponse<void>>(`/meetings/${id}`).then(res => res.data);
 

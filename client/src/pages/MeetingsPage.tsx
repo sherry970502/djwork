@@ -8,18 +8,21 @@ import {
   message,
   Popconfirm,
   Typography,
-  Select
+  Select,
+  Modal,
+  Checkbox
 } from 'antd';
 import {
   PlusOutlined,
   PlayCircleOutlined,
   DeleteOutlined,
   EyeOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  SyncOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { getMeetings, processMeeting, deleteMeeting } from '../services/api';
+import { getMeetings, processMeeting, deleteMeeting, reprocessMeeting } from '../services/api';
 import type { MeetingMinutes, Pagination } from '../types';
 import MeetingUploader from '../components/MeetingUploader';
 
@@ -97,6 +100,62 @@ const MeetingsPage: React.FC = () => {
     } catch {
       message.error('删除失败');
     }
+  };
+
+  const handleReprocess = (record: MeetingMinutes) => {
+    let preserveManual = false;
+    let preserveMerged = true;
+
+    Modal.confirm({
+      title: '重新整理会议灵感',
+      width: 500,
+      content: (
+        <div>
+          <p style={{ marginBottom: 16 }}>
+            此操作将使用改进的算法重新提取灵感，解决以下问题：
+          </p>
+          <ul style={{ marginBottom: 16, paddingLeft: 20 }}>
+            <li>区分DJ和其他参会者的发言</li>
+            <li>分类内容类型（待办、结论、问题等）</li>
+            <li>提供原文引用，避免误解</li>
+            <li>更准确的灵感提取</li>
+          </ul>
+          <p style={{ color: '#ff4d4f', marginBottom: 12 }}>
+            ⚠️ 现有的 <strong>{record.thoughtCount || 0}</strong> 条灵感将被删除
+          </p>
+          <div>
+            <Checkbox
+              defaultChecked={preserveManual}
+              onChange={e => preserveManual = e.target.checked}
+            >
+              保留手动添加的灵感
+            </Checkbox>
+            <br />
+            <Checkbox
+              defaultChecked={preserveMerged}
+              onChange={e => preserveMerged = e.target.checked}
+            >
+              保留已合并的灵感（推荐）
+            </Checkbox>
+          </div>
+        </div>
+      ),
+      okText: '确认重新整理',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await reprocessMeeting(record._id, {
+            preserveManual,
+            preserveMerged
+          });
+          message.success('已开始重新整理，请稍后刷新查看结果');
+          fetchMeetings(pagination.page);
+        } catch (error: any) {
+          message.error(error.response?.data?.message || '重新整理失败');
+        }
+      }
+    });
   };
 
   const columns: ColumnsType<MeetingMinutes> = [
@@ -185,6 +244,16 @@ const MeetingsPage: React.FC = () => {
               onClick={() => handleProcess(record._id)}
             >
               重试
+            </Button>
+          )}
+          {record.processStatus === 'completed' && (
+            <Button
+              type="link"
+              size="small"
+              icon={<SyncOutlined />}
+              onClick={() => handleReprocess(record)}
+            >
+              重新整理
             </Button>
           )}
           <Popconfirm
