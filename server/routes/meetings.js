@@ -18,6 +18,9 @@ router.post('/upload', upload.single('file'), meetingController.uploadMeeting);
 // POST /api/meetings/:id/process - Process meeting with AI
 router.post('/:id/process', meetingController.processMeeting);
 
+// POST /api/meetings/:id/reprocess - Reprocess meeting with improved extraction
+router.post('/:id/reprocess', meetingController.reprocessMeeting);
+
 // DELETE /api/meetings/:id - Delete meeting
 router.delete('/:id', meetingController.deleteMeeting);
 
