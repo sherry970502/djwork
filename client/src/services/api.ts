@@ -143,6 +143,20 @@ export const deleteTag = (id: string) =>
 export const getTagStats = () =>
   api.get<ApiResponse<TagStats[]>>('/tags/stats').then(res => res.data);
 
+// 查找标签匹配的历史内容
+export const findTagMatches = (tagId: string, useAI?: boolean) =>
+  api.get<ApiResponse<any>>(`/tags/${tagId}/find-matches`, {
+    params: { useAI }
+  }).then(res => res.data);
+
+// 应用标签到历史内容
+export const applyTagToHistory = (tagId: string, data: {
+  meetingIds?: string[];
+  thoughtIds?: string[];
+  applyToMeetingThoughts?: boolean;
+}) =>
+  api.post<ApiResponse<any>>(`/tags/${tagId}/apply-to-history`, data).then(res => res.data);
+
 // Tasks API (组织事务)
 export const getTasks = (params?: {
   page?: number;

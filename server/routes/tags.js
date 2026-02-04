@@ -20,4 +20,10 @@ router.put('/:id', tagController.updateTag);
 // DELETE /api/tags/:id - Delete tag
 router.delete('/:id', tagController.deleteTag);
 
+// POST /api/tags/:id/find-matches - Find matching content for tag
+router.get('/:id/find-matches', tagController.findMatchingContent);
+
+// POST /api/tags/:id/apply-to-history - Apply tag to selected historical content
+router.post('/:id/apply-to-history', tagController.applyTagToHistory);
+
 module.exports = router;
