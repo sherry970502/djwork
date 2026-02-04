@@ -161,7 +161,7 @@ ${content}
     try {
       const response = await this.callClaudeAPI([
         { role: 'user', content: prompt }
-      ], 6000); // 增加 token 限制以支持更详细的输出
+      ], 4096); // Haiku 最大支持 4096 tokens
 
       const responseText = response.content[0].text.trim();
 
