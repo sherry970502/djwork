@@ -338,6 +338,14 @@ export const removePlanItem = (month: string, itemId: string) =>
 export const reviewPlanItem = (month: string, itemId: string) =>
   api.post<ApiResponse<any>>(`/monthly-plans/${month}/items/${itemId}/review`).then(res => res.data);
 
+// 获取计划项目相关的会议（智能检索）
+export const getRelatedMeetingsForItem = (month: string, itemId: string) =>
+  api.get<ApiResponse<any>>(`/monthly-plans/${month}/items/${itemId}/related-meetings`).then(res => res.data);
+
+// 使用选中的会议进行复盘
+export const reviewPlanItemWithSelection = (month: string, itemId: string, selectedMeetingIds: string[]) =>
+  api.post<ApiResponse<any>>(`/monthly-plans/${month}/items/${itemId}/review-with-selection`, { selectedMeetingIds }).then(res => res.data);
+
 export const reviewMonthlyPlan = (month: string) =>
   api.post<ApiResponse<any>>(`/monthly-plans/${month}/review`).then(res => res.data);
 

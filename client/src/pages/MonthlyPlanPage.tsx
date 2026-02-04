@@ -23,7 +23,8 @@ import {
   Statistic,
   Tabs,
   Checkbox,
-  Radio
+  Radio,
+  Dropdown
 } from 'antd';
 import {
   PlusOutlined,
@@ -49,7 +50,9 @@ import {
   BookOutlined,
   ThunderboltOutlined,
   QuestionCircleOutlined,
-  AppstoreOutlined
+  AppstoreOutlined,
+  DownOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as api from '../services/api';
@@ -90,6 +93,7 @@ const planStatusConfig: Record<string, { label: string; color: string; icon: Rea
 const completionStatusConfig: Record<string, { label: string; color: string }> = {
   completed: { label: '已完成', color: 'success' },
   partial: { label: '部分完成', color: 'warning' },
+  in_progress: { label: '进行中', color: 'processing' },
   not_started: { label: '未开始', color: 'error' },
   unclear: { label: '待评估', color: 'default' }
 };
@@ -116,6 +120,13 @@ const MonthlyPlanPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeProject, setActiveProject] = useState<string>('all');
+  // 会议选择复盘相关状态
+  const [meetingSelectModalVisible, setMeetingSelectModalVisible] = useState(false);
+  const [relatedMeetings, setRelatedMeetings] = useState<any[]>([]);
+  const [selectedMeetingIds, setSelectedMeetingIds] = useState<string[]>([]);
+  const [loadingMeetings, setLoadingMeetings] = useState(false);
+  const [reviewingWithSelection, setReviewingWithSelection] = useState(false);
+  const [reviewTargetItem, setReviewTargetItem] = useState<any>(null);
   const [form] = Form.useForm();
   const [migrateForm] = Form.useForm();
 
@@ -215,6 +226,60 @@ const MonthlyPlanPage: React.FC = () => {
       message.error('复盘失败');
     } finally {
       setReviewingItem(null);
+    }
+  };
+
+  // 打开会议选择复盘 Modal
+  const openMeetingSelectModal = async (item: any) => {
+    setReviewTargetItem(item);
+    setSelectedMeetingIds([]);
+    setMeetingSelectModalVisible(true);
+    setLoadingMeetings(true);
+
+    try {
+      const res = await api.getRelatedMeetingsForItem(currentMonth, item._id);
+      if (res.success) {
+        setRelatedMeetings(res.data.meetings || []);
+        // 默认选中得分最高的会议（如果有）
+        const topMeetings = (res.data.meetings || [])
+          .filter((m: any) => m.score >= 2)
+          .map((m: any) => m._id);
+        setSelectedMeetingIds(topMeetings);
+      }
+    } catch (error) {
+      message.error('获取相关会议失败');
+      setRelatedMeetings([]);
+    } finally {
+      setLoadingMeetings(false);
+    }
+  };
+
+  // 使用选中的会议进行复盘
+  const handleReviewWithSelection = async () => {
+    if (!reviewTargetItem) return;
+
+    if (selectedMeetingIds.length === 0) {
+      message.warning('请至少选择一个会议');
+      return;
+    }
+
+    setReviewingWithSelection(true);
+    try {
+      const res = await api.reviewPlanItemWithSelection(
+        currentMonth,
+        reviewTargetItem._id,
+        selectedMeetingIds
+      );
+      if (res.success) {
+        message.success('复盘完成');
+        setMeetingSelectModalVisible(false);
+        setReviewTargetItem(null);
+        fetchPlan();
+      }
+    } catch (error) {
+      message.error('复盘失败');
+    } finally {
+      setReviewingWithSelection(false);
     }
   };
 
@@ -426,7 +491,7 @@ const MonthlyPlanPage: React.FC = () => {
     {
       title: 'AI 复盘',
       key: 'review',
-      width: 120,
+      width: 140,
       render: (_: any, record: any) => {
         if (record.review?.completionStatus) {
           const config = completionStatusConfig[record.review.completionStatus];
@@ -443,14 +508,27 @@ const MonthlyPlanPage: React.FC = () => {
           );
         }
         return (
-          <Button
-            size="small"
-            icon={<RobotOutlined />}
-            loading={reviewingItem === record._id}
-            onClick={() => handleReviewItem(record._id)}
+          <Dropdown
+            menu={{
+              items: [
+                { key: 'auto', label: '自动复盘', icon: <RobotOutlined /> },
+                { key: 'select', label: '选择会议复盘', icon: <SearchOutlined /> }
+              ],
+              onClick: ({ key }) => {
+                if (key === 'auto') handleReviewItem(record._id);
+                if (key === 'select') openMeetingSelectModal(record);
+              }
+            }}
+            trigger={['click']}
           >
-            复盘
-          </Button>
+            <Button
+              size="small"
+              icon={<RobotOutlined />}
+              loading={reviewingItem === record._id}
+            >
+              复盘 <DownOutlined />
+            </Button>
+          </Dropdown>
         );
       }
     },
@@ -1081,13 +1159,31 @@ const MonthlyPlanPage: React.FC = () => {
                 迁移到 {getNextMonth()}
               </Button>
             )}
-            <Button
-              icon={<RobotOutlined />}
-              loading={reviewingItem === selectedItem?._id}
-              onClick={() => selectedItem && handleReviewItem(selectedItem._id)}
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'auto', label: '自动复盘', icon: <RobotOutlined /> },
+                  { key: 'select', label: '选择会议复盘', icon: <SearchOutlined /> }
+                ],
+                onClick: ({ key }) => {
+                  if (key === 'auto' && selectedItem) {
+                    handleReviewItem(selectedItem._id);
+                  }
+                  if (key === 'select' && selectedItem) {
+                    setDetailModalVisible(false);
+                    openMeetingSelectModal(selectedItem);
+                  }
+                }
+              }}
+              trigger={['click']}
             >
-              重新复盘
-            </Button>
+              <Button
+                icon={<RobotOutlined />}
+                loading={reviewingItem === selectedItem?._id}
+              >
+                重新复盘 <DownOutlined />
+              </Button>
+            </Dropdown>
             <Button onClick={() => setDetailModalVisible(false)}>关闭</Button>
           </Space>
         }
@@ -1233,6 +1329,142 @@ const MonthlyPlanPage: React.FC = () => {
             })}
           </ul>
         </div>
+      </Modal>
+
+      {/* 会议选择复盘 Modal */}
+      <Modal
+        title={
+          <Space>
+            <SearchOutlined />
+            选择会议进行复盘
+          </Space>
+        }
+        open={meetingSelectModalVisible}
+        onCancel={() => {
+          setMeetingSelectModalVisible(false);
+          setReviewTargetItem(null);
+          setRelatedMeetings([]);
+          setSelectedMeetingIds([]);
+        }}
+        footer={[
+          <Button key="cancel" onClick={() => setMeetingSelectModalVisible(false)}>
+            取消
+          </Button>,
+          <Button
+            key="auto"
+            icon={<RobotOutlined />}
+            onClick={() => {
+              setMeetingSelectModalVisible(false);
+              if (reviewTargetItem) {
+                handleReviewItem(reviewTargetItem._id);
+              }
+            }}
+          >
+            自动复盘
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            icon={<RobotOutlined />}
+            loading={reviewingWithSelection}
+            disabled={selectedMeetingIds.length === 0}
+            onClick={handleReviewWithSelection}
+          >
+            使用选中会议复盘 ({selectedMeetingIds.length})
+          </Button>
+        ]}
+        width={700}
+      >
+        {reviewTargetItem && (
+          <Alert
+            message={`复盘项目: ${reviewTargetItem.title}`}
+            description={reviewTargetItem.description}
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        <div style={{ marginBottom: 12 }}>
+          <strong>请选择与此项目相关的会议：</strong>
+          <span style={{ color: '#666', marginLeft: 8 }}>
+            系统已根据关键词匹配度为您排序，匹配度越高越相关
+          </span>
+        </div>
+
+        {loadingMeetings ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Spin tip="正在检索相关会议..." />
+          </div>
+        ) : relatedMeetings.length > 0 ? (
+          <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+            <Checkbox.Group
+              value={selectedMeetingIds}
+              onChange={(values) => setSelectedMeetingIds(values as string[])}
+              style={{ width: '100%' }}
+            >
+              <List
+                dataSource={relatedMeetings}
+                renderItem={(meeting: any) => (
+                  <List.Item
+                    style={{
+                      padding: '12px',
+                      background: selectedMeetingIds.includes(meeting._id) ? '#e6f7ff' : '#fafafa',
+                      marginBottom: 8,
+                      borderRadius: 4,
+                      border: selectedMeetingIds.includes(meeting._id) ? '1px solid #1890ff' : '1px solid #f0f0f0'
+                    }}
+                  >
+                    <div style={{ width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <Checkbox value={meeting._id} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 500 }}>
+                              <CalendarOutlined style={{ marginRight: 8 }} />
+                              {meeting.title}
+                            </span>
+                            <Space>
+                              <Tag color={meeting.score >= 3 ? 'success' : meeting.score >= 2 ? 'warning' : 'default'}>
+                                匹配度: {meeting.score}
+                              </Tag>
+                              <span style={{ color: '#999', fontSize: 12 }}>
+                                {new Date(meeting.meetingDate).toLocaleDateString('zh-CN')}
+                              </span>
+                            </Space>
+                          </div>
+                          {meeting.matchedKeywords?.length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                              <span style={{ color: '#666', fontSize: 12 }}>匹配关键词: </span>
+                              {meeting.matchedKeywords.map((kw: string, i: number) => (
+                                <Tag key={i} color="blue" style={{ fontSize: 11 }}>{kw}</Tag>
+                              ))}
+                            </div>
+                          )}
+                          {meeting.thoughtCount > 0 && (
+                            <div style={{ marginTop: 4, color: '#666', fontSize: 12 }}>
+                              <BulbOutlined style={{ marginRight: 4 }} />
+                              包含 {meeting.thoughtCount} 条灵感记录
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            </Checkbox.Group>
+          </div>
+        ) : (
+          <Empty
+            description="未找到相关会议"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          >
+            <p style={{ color: '#666' }}>
+              可以尝试使用「自动复盘」功能，AI 会自动分析所有会议
+            </p>
+          </Empty>
+        )}
       </Modal>
 
       <style>{`
