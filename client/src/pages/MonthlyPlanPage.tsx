@@ -234,6 +234,7 @@ const MonthlyPlanPage: React.FC = () => {
     setReviewTargetItem(item);
     setSelectedMeetingIds([]);
     setMeetingSelectModalVisible(true);
+    setDetailModalVisible(false); // 关闭详情对话框
     setLoadingMeetings(true);
 
     try {
@@ -1170,7 +1171,6 @@ const MonthlyPlanPage: React.FC = () => {
                     handleReviewItem(selectedItem._id);
                   }
                   if (key === 'select' && selectedItem) {
-                    setDetailModalVisible(false);
                     openMeetingSelectModal(selectedItem);
                   }
                 }
