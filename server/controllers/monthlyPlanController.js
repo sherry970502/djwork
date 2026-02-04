@@ -894,10 +894,12 @@ exports.reviewPlanItemWithSelection = async (req, res) => {
     });
   } catch (error) {
     console.error('复盘失败:', error);
+    console.error('错误堆栈:', error.stack);
     res.status(500).json({
       success: false,
-      message: '复盘失败',
-      error: error.message
+      message: `复盘失败: ${error.message}`,
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

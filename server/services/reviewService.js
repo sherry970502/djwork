@@ -289,15 +289,10 @@ ${thoughtsContext || '【本月无灵感记录】'}
       };
     } catch (error) {
       console.error('Review failed:', error);
-      return {
-        meetingOutcomes: [],
-        relatedThoughts: [],
-        completionStatus: 'unclear',
-        completionReason: `复盘分析失败: ${error.message}`,
-        gaps: [],
-        summary: '复盘分析失败，请重试',
-        reviewedAt: new Date()
-      };
+      console.error('Error details:', error.response || error.stack);
+
+      // 抛出错误让控制器处理，而不是返回一个"成功"的失败对象
+      throw new Error(`AI 复盘失败: ${error.message}。请检查 Claude API 配置或网络连接。`);
     }
   }
 

@@ -276,9 +276,13 @@ const MonthlyPlanPage: React.FC = () => {
         setMeetingSelectModalVisible(false);
         setReviewTargetItem(null);
         fetchPlan();
+      } else {
+        message.error(res.message || '复盘失败');
       }
-    } catch (error) {
-      message.error('复盘失败');
+    } catch (error: any) {
+      console.error('复盘失败:', error);
+      const errorMsg = error.response?.data?.message || error.message || '复盘失败';
+      message.error(`复盘失败: ${errorMsg}`);
     } finally {
       setReviewingWithSelection(false);
     }
