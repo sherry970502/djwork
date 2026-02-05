@@ -36,7 +36,7 @@ const CreativeMindMapPage: React.FC = () => {
 
       const response = await api.createDesign({
         title: values.title,
-        description: values.description || '',
+        description: values.description || '暂无描述',
         category: 'product',
         priority: 'medium',
         goals: [],
@@ -49,7 +49,9 @@ const CreativeMindMapPage: React.FC = () => {
       await loadDesigns();
       setSelectedDesign(response.data);
     } catch (error: any) {
-      message.error('创建失败');
+      console.error('Create design error:', error);
+      const errorMsg = error.response?.data?.message || error.message || '创建失败';
+      message.error(`创建失败: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -188,8 +190,9 @@ const CreativeMindMapPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            label="简要描述（可选）"
+            label="简要描述"
             name="description"
+            rules={[{ required: true, message: '请输入设计描述' }]}
           >
             <Input.TextArea
               placeholder="补充一些背景信息，帮助 AI 更好地理解你的需求..."
