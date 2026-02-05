@@ -10,8 +10,7 @@ import {
   BulbOutlined,
   QuestionCircleOutlined,
   TrophyOutlined,
-  EyeOutlined,
-  TeamOutlined
+  EyeOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Thought, MeetingMinutes } from '../types';
