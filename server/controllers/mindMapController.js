@@ -155,13 +155,26 @@ exports.divergeNode = async (req, res) => {
       }
     );
 
-    // 创建新节点
+    // 检查父节点是否已有子节点，计算合理的起始位置
+    const existingChildren = mindMap.nodes.filter(n => n.parentId === nodeId);
+    let startX = currentNode.position.x;
+
+    if (existingChildren.length > 0) {
+      // 如果已有子节点，找到最右边的位置
+      const maxX = Math.max(...existingChildren.map(n => n.position.x));
+      startX = maxX + 250; // 从最右边节点往右250px开始
+    } else {
+      // 如果没有子节点，从父节点位置开始，居中排列
+      startX = currentNode.position.x - (ideas.length - 1) * 100;
+    }
+
+    // 创建新节点，水平排列避免重叠
     const newNodes = ideas.map((idea, index) => ({
       id: uuidv4(),
       content: idea.content,
       parentId: nodeId,
       position: {
-        x: currentNode.position.x + (index - ideas.length / 2) * 200,
+        x: startX + index * 200,
         y: currentNode.position.y + 150
       },
       isMarked: false,

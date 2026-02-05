@@ -27,59 +27,52 @@ const CreativeNode: React.FC<NodeProps<CreativeNodeData>> = ({ id, data, selecte
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(data.label);
 
-  // 根据层级和类型生成渐变色
+  // 简洁高级的配色方案
   const getNodeStyle = () => {
     const isRoot = data.level === 0;
     const isMarked = data.isMarked;
     const isAI = data.isAIGenerated;
 
-    // 标记节点 - 金色光晕
+    // 标记节点 - 金色强调
     if (isMarked) {
       return {
-        background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
-        boxShadow: '0 0 20px rgba(255, 215, 0, 0.6), 0 8px 24px rgba(0,0,0,0.15)',
+        background: '#FFFFFF',
+        boxShadow: '0 0 0 3px #FFD700, 0 4px 16px rgba(255, 215, 0, 0.3)',
         border: '2px solid #FFD700',
+        color: '#1a1a1a',
       };
     }
 
-    // 根节点 - 强烈的渐变
+    // 根节点 - 深色背景，白色文字
     if (isRoot) {
       return {
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
-        border: '2px solid rgba(255,255,255,0.3)',
+        background: '#1a1a1a',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+        border: '2px solid #333333',
+        color: '#FFFFFF',
       };
     }
 
-    // AI 生成节点 - 蓝色科技感
+    // AI 生成节点 - 浅灰背景，细边框
     if (isAI) {
       return {
-        background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        background: '#F8F9FA',
         boxShadow: selected
-          ? '0 0 0 3px rgba(79, 172, 254, 0.3), 0 8px 24px rgba(0,0,0,0.15)'
-          : '0 4px 12px rgba(79, 172, 254, 0.25)',
-        border: '2px solid rgba(255,255,255,0.4)',
+          ? '0 0 0 2px #1a1a1a, 0 4px 16px rgba(0, 0, 0, 0.1)'
+          : '0 2px 8px rgba(0, 0, 0, 0.08)',
+        border: '1.5px solid #E0E0E0',
+        color: '#1a1a1a',
       };
     }
 
-    // 普通节点 - 根据层级渐变
-    const colors = [
-      ['#a8edea', '#fed6e3'], // 层级1 - 青粉
-      ['#ffecd2', '#fcb69f'], // 层级2 - 橙粉
-      ['#e0c3fc', '#8ec5fc'], // 层级3 - 紫蓝
-      ['#fbc2eb', '#a6c1ee'], // 层级4 - 粉蓝
-      ['#fdcbf1', '#e6dee9'], // 层级5+ - 粉灰
-    ];
-
-    const colorIndex = Math.min(data.level - 1, colors.length - 1);
-    const [color1, color2] = colors[colorIndex];
-
+    // 普通节点 - 白色背景，简洁边框
     return {
-      background: `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`,
+      background: '#FFFFFF',
       boxShadow: selected
-        ? '0 0 0 3px rgba(138, 43, 226, 0.2), 0 8px 24px rgba(0,0,0,0.15)'
-        : '0 4px 12px rgba(0,0,0,0.1)',
-      border: '2px solid rgba(255,255,255,0.5)',
+        ? '0 0 0 2px #666666, 0 4px 16px rgba(0, 0, 0, 0.1)'
+        : '0 2px 8px rgba(0, 0, 0, 0.08)',
+      border: '1.5px solid #D0D0D0',
+      color: '#1a1a1a',
     };
   };
 
@@ -138,10 +131,9 @@ const CreativeNode: React.FC<NodeProps<CreativeNodeData>> = ({ id, data, selecte
         style={{
           ...nodeStyle,
           padding: isRoot ? '20px 30px' : '12px 20px',
-          borderRadius: isRoot ? '20px' : '12px',
+          borderRadius: isRoot ? '16px' : '10px',
           minWidth: isRoot ? '200px' : '150px',
           maxWidth: '300px',
-          color: '#fff',
           fontWeight: data.isMarked ? 700 : isRoot ? 600 : 500,
           fontSize: isRoot ? '18px' : data.isMarked ? '15px' : '14px',
           textAlign: 'center',
@@ -158,10 +150,10 @@ const CreativeNode: React.FC<NodeProps<CreativeNodeData>> = ({ id, data, selecte
             type="target"
             position={Position.Top}
             style={{
-              background: '#fff',
-              width: '10px',
-              height: '10px',
-              border: '2px solid rgba(255,255,255,0.8)',
+              background: '#FFFFFF',
+              width: '8px',
+              height: '8px',
+              border: '2px solid #666666',
             }}
           />
         )}
@@ -176,12 +168,12 @@ const CreativeNode: React.FC<NodeProps<CreativeNodeData>> = ({ id, data, selecte
               width: '20px',
               height: '20px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: '#1a1a1a',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '10px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
             }}
           >
             🤖
@@ -221,7 +213,6 @@ const CreativeNode: React.FC<NodeProps<CreativeNodeData>> = ({ id, data, selecte
           <div
             style={{
               wordBreak: 'break-word',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
             }}
           >
             {data.label}
@@ -233,10 +224,10 @@ const CreativeNode: React.FC<NodeProps<CreativeNodeData>> = ({ id, data, selecte
           type="source"
           position={Position.Bottom}
           style={{
-            background: '#fff',
-            width: '10px',
-            height: '10px',
-            border: '2px solid rgba(255,255,255,0.8)',
+            background: '#FFFFFF',
+            width: '8px',
+            height: '8px',
+            border: '2px solid #666666',
           }}
         />
 

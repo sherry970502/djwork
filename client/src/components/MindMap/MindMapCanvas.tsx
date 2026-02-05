@@ -103,8 +103,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
       source: edge.source,
       target: edge.target,
       type: 'smoothstep',
-      animated: true,
-      style: { stroke: 'rgba(138, 43, 226, 0.3)', strokeWidth: 2 },
+      animated: false,
+      style: { stroke: '#D0D0D0', strokeWidth: 2 },
     }));
 
     setNodes(flowNodes);
@@ -171,8 +171,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
         source: edge.source,
         target: edge.target,
         type: 'smoothstep',
-        animated: true,
-        style: { stroke: 'rgba(138, 43, 226, 0.3)', strokeWidth: 2 },
+        animated: false,
+        style: { stroke: '#D0D0D0', strokeWidth: 2 },
       }));
 
       setNodes((nds) => [...nds, ...newFlowNodes]);
@@ -273,8 +273,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
         source: response.data.edge.source,
         target: response.data.edge.target,
         type: 'smoothstep',
-        animated: true,
-        style: { stroke: 'rgba(138, 43, 226, 0.3)', strokeWidth: 2 },
+        animated: false,
+        style: { stroke: '#D0D0D0', strokeWidth: 2 },
       };
 
       setNodes((nds) => [...nds, newNode]);
@@ -384,19 +384,12 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
           type: 'smoothstep',
           animated: true,
         }}
-        onNodeClick={(_, node) => {
-          // 点击节点自动发散（如果还没有子节点）
-          const hasChildren = edges.some((e) => e.source === node.id);
-          if (!hasChildren && !diverging) {
-            handleDiverge(node.id);
-          }
-        }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1}
-          color="rgba(138, 43, 226, 0.1)"
+          color="rgba(0, 0, 0, 0.05)"
         />
         <Controls
           style={{
