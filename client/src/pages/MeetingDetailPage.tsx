@@ -172,7 +172,26 @@ const MeetingDetailPage: React.FC = () => {
         .trim();
     };
 
-    // 策略2: 标准化后匹配
+    // 策略2: 英文标点 → 中文标点转换后匹配
+    const toChinese = (text: string) => {
+      return text
+        .replace(/,/g, '，')
+        .replace(/\./g, '。')
+        .replace(/!/g, '！')
+        .replace(/\?/g, '？')
+        .replace(/;/g, '；')
+        .replace(/:/g, '：')
+        .replace(/\.\.\./g, '…');
+    };
+    const searchWithChinesePunct = toChinese(searchText);
+    index = content.indexOf(searchWithChinesePunct);
+    if (index !== -1) {
+      console.log('✅ 英文标点转中文标点后匹配成功');
+      // 使用转换后的文本作为匹配结果
+      return { index, matchedText: searchWithChinesePunct, method: 'chinese-punct' };
+    }
+
+    // 策略3: 标准化后匹配（统一为英文标点）
     const normalizedSearch = normalizeText(searchText);
     const normalizedContent = normalizeText(content);
     index = normalizedContent.indexOf(normalizedSearch);
