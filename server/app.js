@@ -30,11 +30,14 @@ const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
     ? [
         process.env.FRONTEND_URL,           // 主前端域名
-        'https://dj-meeting.vercel.app',    // Vercel 部署地址
+        'https://djwork-zeta.vercel.app',   // 当前 Vercel 部署地址
+        'https://dj-meeting.vercel.app',    // 旧 Vercel 部署地址
         /\.vercel\.app$/                     // 所有 Vercel 预览地址
       ].filter(Boolean)
     : true,  // 开发环境允许所有
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 // Middleware
