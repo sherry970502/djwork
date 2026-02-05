@@ -1,0 +1,356 @@
+const MindMap = require('../models/mindMap');
+const creativeDivergence = require('../services/creativeDivergence');
+const { v4: uuidv4 } = require('uuid');
+
+// 创建思维导图
+exports.createMindMap = async (req, res) => {
+  try {
+    const { designId, title } = req.body;
+
+    if (!designId || !title) {
+      return res.status(400).json({
+        success: false,
+        message: 'designId and title are required'
+      });
+    }
+
+    // 创建根节点
+    const rootNode = {
+      id: uuidv4(),
+      content: title,
+      parentId: null,
+      position: { x: 0, y: 0 },
+      isMarked: false,
+      isAIGenerated: false,
+      level: 0,
+      divergenceType: 'root'
+    };
+
+    const mindMap = new MindMap({
+      designId,
+      title,
+      nodes: [rootNode],
+      edges: []
+    });
+
+    await mindMap.save();
+
+    res.json({
+      success: true,
+      data: mindMap
+    });
+  } catch (error) {
+    console.error('Create mind map error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 获取思维导图
+exports.getMindMap = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const mindMap = await MindMap.findById(id);
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mind map not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: mindMap
+    });
+  } catch (error) {
+    console.error('Get mind map error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 根据设计ID获取思维导图
+exports.getMindMapByDesignId = async (req, res) => {
+  try {
+    const { designId } = req.params;
+
+    const mindMap = await MindMap.findOne({ designId, status: 'active' });
+
+    res.json({
+      success: true,
+      data: mindMap
+    });
+  } catch (error) {
+    console.error('Get mind map by design error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// AI 发散节点
+exports.divergeNode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nodeId } = req.body;
+
+    const mindMap = await MindMap.findById(id);
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mind map not found'
+      });
+    }
+
+    // 找到当前节点
+    const currentNode = mindMap.nodes.find(n => n.id === nodeId);
+    if (!currentNode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Node not found'
+      });
+    }
+
+    // 构建上下文
+    const parentNodes = [];
+    let node = currentNode;
+    while (node.parentId) {
+      const parent = mindMap.nodes.find(n => n.id === node.parentId);
+      if (parent) {
+        parentNodes.unshift(parent.content);
+        node = parent;
+      } else {
+        break;
+      }
+    }
+
+    const markedNodes = mindMap.nodes
+      .filter(n => n.isMarked)
+      .map(n => n.content);
+
+    // AI 发散
+    const ideas = await creativeDivergence.divergeFromNode(
+      currentNode.content,
+      {
+        parentNodes,
+        markedNodes,
+        level: currentNode.level + 1,
+        isRoot: currentNode.level === 0
+      }
+    );
+
+    // 创建新节点
+    const newNodes = ideas.map((idea, index) => ({
+      id: uuidv4(),
+      content: idea.content,
+      parentId: nodeId,
+      position: {
+        x: currentNode.position.x + (index - ideas.length / 2) * 200,
+        y: currentNode.position.y + 150
+      },
+      isMarked: false,
+      isAIGenerated: true,
+      level: currentNode.level + 1,
+      divergenceType: idea.type
+    }));
+
+    // 创建新边
+    const newEdges = newNodes.map(node => ({
+      source: nodeId,
+      target: node.id
+    }));
+
+    // 更新思维导图
+    mindMap.nodes.push(...newNodes);
+    mindMap.edges.push(...newEdges);
+    await mindMap.save();
+
+    res.json({
+      success: true,
+      data: {
+        nodes: newNodes,
+        edges: newEdges
+      }
+    });
+  } catch (error) {
+    console.error('Diverge node error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 更新节点
+exports.updateNode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nodeId, updates } = req.body;
+
+    const mindMap = await MindMap.findById(id);
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mind map not found'
+      });
+    }
+
+    const node = mindMap.nodes.find(n => n.id === nodeId);
+    if (!node) {
+      return res.status(404).json({
+        success: false,
+        message: 'Node not found'
+      });
+    }
+
+    // 更新节点属性
+    Object.assign(node, updates);
+    await mindMap.save();
+
+    res.json({
+      success: true,
+      data: node
+    });
+  } catch (error) {
+    console.error('Update node error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 删除节点（及其所有子节点）
+exports.deleteNode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nodeId } = req.body;
+
+    const mindMap = await MindMap.findById(id);
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mind map not found'
+      });
+    }
+
+    // 找到所有要删除的节点（包括子孙节点）
+    const nodesToDelete = [nodeId];
+    let i = 0;
+    while (i < nodesToDelete.length) {
+      const children = mindMap.nodes
+        .filter(n => n.parentId === nodesToDelete[i])
+        .map(n => n.id);
+      nodesToDelete.push(...children);
+      i++;
+    }
+
+    // 删除节点和相关的边
+    mindMap.nodes = mindMap.nodes.filter(n => !nodesToDelete.includes(n.id));
+    mindMap.edges = mindMap.edges.filter(
+      e => !nodesToDelete.includes(e.source) && !nodesToDelete.includes(e.target)
+    );
+
+    await mindMap.save();
+
+    res.json({
+      success: true,
+      data: { deletedNodes: nodesToDelete }
+    });
+  } catch (error) {
+    console.error('Delete node error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 添加手动节点
+exports.addManualNode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { parentId, content, position } = req.body;
+
+    const mindMap = await MindMap.findById(id);
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mind map not found'
+      });
+    }
+
+    const parentNode = mindMap.nodes.find(n => n.id === parentId);
+    if (!parentNode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parent node not found'
+      });
+    }
+
+    const newNode = {
+      id: uuidv4(),
+      content,
+      parentId,
+      position: position || {
+        x: parentNode.position.x,
+        y: parentNode.position.y + 150
+      },
+      isMarked: false,
+      isAIGenerated: false,
+      level: parentNode.level + 1,
+      divergenceType: 'vertical'
+    };
+
+    const newEdge = {
+      source: parentId,
+      target: newNode.id
+    };
+
+    mindMap.nodes.push(newNode);
+    mindMap.edges.push(newEdge);
+    await mindMap.save();
+
+    res.json({
+      success: true,
+      data: { node: newNode, edge: newEdge }
+    });
+  } catch (error) {
+    console.error('Add manual node error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 删除思维导图
+exports.deleteMindMap = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await MindMap.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: 'Mind map deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete mind map error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

@@ -17,6 +17,7 @@ const tasksRouter = require('./routes/tasks');
 const knowledgeRouter = require('./routes/knowledge');
 const designsRouter = require('./routes/designs');
 const monthlyPlansRouter = require('./routes/monthlyPlans');
+const mindmapsRouter = require('./routes/mindmaps');
 
 // Import controllers for initialization
 const { initPresetTags } = require('./controllers/tagController');
@@ -55,6 +56,7 @@ app.use('/api/tasks', tasksRouter);
 app.use('/api/knowledge', knowledgeRouter);
 app.use('/api/designs', designsRouter);
 app.use('/api/monthly-plans', monthlyPlansRouter);
+app.use('/api/mindmaps', mindmapsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

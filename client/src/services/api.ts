@@ -398,4 +398,38 @@ export const batchMigrateItems = (month: string, data: {
 export const updateItemProject = (month: string, itemId: string, project: string) =>
   api.put<ApiResponse<any>>(`/monthly-plans/${month}/items/${itemId}/project`, { project }).then(res => res.data);
 
+// ==================== Mind Map APIs ====================
+
+// 创建思维导图
+export const createMindMap = (data: { designId: string; title: string }) =>
+  api.post<ApiResponse<any>>('/mindmaps', data).then(res => res.data);
+
+// 获取思维导图
+export const getMindMap = (id: string) =>
+  api.get<ApiResponse<any>>(`/mindmaps/${id}`).then(res => res.data);
+
+// 根据设计ID获取思维导图
+export const getMindMapByDesignId = (designId: string) =>
+  api.get<ApiResponse<any>>(`/mindmaps/design/${designId}`).then(res => res.data);
+
+// AI 发散节点
+export const divergeNode = (id: string, nodeId: string) =>
+  api.post<ApiResponse<any>>(`/mindmaps/${id}/diverge`, { nodeId }).then(res => res.data);
+
+// 更新节点
+export const updateMindMapNode = (id: string, nodeId: string, updates: any) =>
+  api.put<ApiResponse<any>>(`/mindmaps/${id}/nodes`, { nodeId, updates }).then(res => res.data);
+
+// 删除节点
+export const deleteMindMapNode = (id: string, nodeId: string) =>
+  api.delete<ApiResponse<any>>(`/mindmaps/${id}/nodes`, { data: { nodeId } }).then(res => res.data);
+
+// 添加手动节点
+export const addManualNode = (id: string, data: { parentId: string; content: string; position?: { x: number; y: number } }) =>
+  api.post<ApiResponse<any>>(`/mindmaps/${id}/nodes`, data).then(res => res.data);
+
+// 删除思维导图
+export const deleteMindMap = (id: string) =>
+  api.delete<ApiResponse<any>>(`/mindmaps/${id}`).then(res => res.data);
+
 export default api;
