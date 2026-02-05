@@ -113,58 +113,47 @@ ${content}
   async extractThoughtsV2(content, tags) {
     const tagList = tags.map(t => `- ${t.name}: ${t.displayName} (${t.keywords.join(', ')})`).join('\n');
 
-    const prompt = `你是一个专业的会议纪要分析助手。请从会议纪要中**只提取DJ的发言内容**。
+    const prompt = `从会议纪要中提取DJ的发言。
 
-【核心原则】
-⚠️ **只提取DJ说的话，完全忽略其他参会者的发言**
+【识别DJ】
+- 标注"DJ："、"DJ说："→只提取这些
+- 无标注→提取主持人/决策者观点
+⚠️ 其他人发言（"XX说"、团队汇报）→完全忽略
 
-1. **识别DJ的发言**：
-   - 如果会议纪要中明确标注了说话人（如"DJ："、"DJ说："），只提取这些内容
-   - 如果没有明确标注，则根据语境判断，提取主持人/决策者的观点
-   - 当无法确定时，提取看起来是主要决策内容的部分
+【提取原则】
+1. 保持具象，不要抽象化
+   ✗ 错误："公司能力需要提高"
+   ✓ 正确："AI生产线能力需要提高"
+2. 保留具体数据和业务领域
+   - 数字、指标、具体产品名不能丢
+   - 业务领域（AI、教育、设计等）必须保留
+3. 理解本质意思，不过度概括
 
-2. **忽略其他人**：
-   - 明确标注了其他人姓名的发言：**完全忽略，不要提取**
-   - 以"XX说"、"XX认为"开头的内容：**完全忽略，不要提取**
-   - 团队成员的汇报、建议、提问：**完全忽略，不要提取**
+【类型】TODO/CONCLUSION/DECISION/QUESTION/IDEA/OBSERVATION
 
-3. **内容类型分类**：
-   - TODO: 待办事项（"需要做..."、"计划..."、"下周..."）
-   - CONCLUSION: 分析结论（"所以..."、"因此..."、"说明..."）
-   - DECISION: 明确决策（"决定..."、"确定..."、"就这样"）
-   - QUESTION: DJ的疑问（"如何...？"、"是否...？"、"怎么办？"）
-   - IDEA: 想法创意（"可以..."、"建议..."、"尝试..."）
-   - OBSERVATION: 观察发现（"发现..."、"注意到..."、"目前..."）
+【必填字段】
+- originalQuote：完整讨论80-150字（问题+讨论+结论）
+- context：说明(1)讨论什么事 (2)如何提出
 
-4. **提供原文引用**：尽量从会议纪要中找到对应的原文片段
-
-【可用标签】
+【标签】
 ${tagList}
 
-【会议纪要内容】
+【会议内容】
 ${content}
 
-【输出格式】
-JSON数组，每个DJ的观点包含：
-{
-  "content": "观点概括（简明扼要，50字以内）",
-  "contentType": "类型（TODO/CONCLUSION/DECISION/QUESTION/IDEA/OBSERVATION）",
+【输出示例】
+[{
+  "content": "AI生产线的内容生成效率需提升到日均500条",
+  "contentType": "CONCLUSION",
   "speaker": "DJ",
-  "originalQuote": "DJ发言的原文片段",
-  "context": "补充说明（可选）",
-  "confidence": 0.85,
-  "tags": ["相关标签name"],
-  "isImportant": false
-}
+  "originalQuote": "DJ提到目前AI生产线日均只能生成200条内容，但竞品已达到500条。团队讨论了算法优化方案后，他认为通过模型并行化和prompt优化，可以在下月达到500条的目标。最后决定投入2名算法工程师专门优化。",
+  "context": "讨论AI内容生产效率时，DJ基于竞品对比数据，提出需将日均产能从200条提升到500条的具体目标",
+  "confidence": 0.9,
+  "tags": ["ai_technology", "product_strategy"],
+  "isImportant": true
+}]
 
-【重要】
-- 只输出JSON数组，不要其他文字
-- speaker字段统一填"DJ"
-- **只提取DJ的内容，其他人的发言一律不要提取**
-- 如果整段会议纪要都是其他人在说，返回空数组 []
-- 宁可少提取，也不要把其他人的话当成DJ的
-
-开始提取：`;
+只输出JSON数组：`;
 
     try {
       const response = await this.callClaudeAPI([
