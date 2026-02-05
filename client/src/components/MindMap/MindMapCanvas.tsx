@@ -53,26 +53,37 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
     loadMindMap();
   }, [designId]);
 
+  // 调试：监听 mindMapId 变化
+  useEffect(() => {
+    console.log('mindMapId changed:', mindMapId);
+  }, [mindMapId]);
+
   const loadMindMap = async () => {
     try {
       setLoading(true);
+      console.log('Loading mind map for designId:', designId);
       const response = await getMindMapByDesignId(designId);
+      console.log('getMindMapByDesignId response:', response);
 
       if (response.data) {
         // 已存在，加载数据
+        console.log('Mind map exists, id:', response.data._id);
         setMindMapId(response.data._id);
         convertToReactFlowData(response.data);
       } else {
         // 不存在，创建新的
+        console.log('Mind map does not exist, creating new one');
         const createResponse = await createMindMap({
           designId,
           title: designTitle,
         });
+        console.log('createMindMap response:', createResponse);
         setMindMapId(createResponse.data._id);
         convertToReactFlowData(createResponse.data);
       }
     } catch (error: any) {
-      message.error('加载失败: ' + error.message);
+      console.error('Load mind map error:', error);
+      message.error('加载失败: ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
