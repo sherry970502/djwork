@@ -59,8 +59,12 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
 
   const handleQuoteClick = () => {
     const quote = thought.originalQuote || thought.originalSegment;
-    if (meeting && typeof meeting === 'object' && quote) {
-      navigate(`/meetings/${meeting._id}?highlight=${encodeURIComponent(quote)}`);
+    if (!quote) return;
+
+    // meeting 可能是对象或字符串ID
+    const meetingId = typeof meeting === 'object' ? meeting._id : meeting;
+    if (meetingId) {
+      navigate(`/meetings/${meetingId}?highlight=${encodeURIComponent(quote)}`);
     }
   };
 
