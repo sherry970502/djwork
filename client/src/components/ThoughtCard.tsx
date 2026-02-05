@@ -61,13 +61,28 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
   });
 
   const handleQuoteClick = () => {
+    console.log('🔵 原文引用被点击');
+
     const quote = thought.originalQuote || thought.originalSegment;
-    if (!quote) return;
+    if (!quote) {
+      console.log('❌ 没有 quote');
+      return;
+    }
 
     // meeting 可能是对象或字符串ID
     const meetingId = typeof meeting === 'object' ? meeting._id : meeting;
+    console.log('会议信息:', {
+      meetingType: typeof meeting,
+      meetingId: meetingId,
+      quote: quote.substring(0, 50) + '...'
+    });
+
     if (meetingId) {
-      navigate(`/meetings/${meetingId}?highlight=${encodeURIComponent(quote)}`);
+      const url = `/meetings/${meetingId}?highlight=${encodeURIComponent(quote)}`;
+      console.log('🚀 准备跳转到:', url);
+      navigate(url);
+    } else {
+      console.log('❌ 没有 meetingId');
     }
   };
 
