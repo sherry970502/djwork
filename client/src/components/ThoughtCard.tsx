@@ -11,7 +11,6 @@ import {
   QuestionCircleOutlined,
   TrophyOutlined,
   EyeOutlined,
-  UserOutlined,
   TeamOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -26,8 +25,7 @@ const contentTypeConfig: Record<string, { label: string; color: string; icon: Re
   DECISION: { label: '决策', color: 'blue', icon: <CheckCircleOutlined /> },
   QUESTION: { label: '问题', color: 'orange', icon: <QuestionCircleOutlined /> },
   IDEA: { label: '想法', color: 'purple', icon: <BulbOutlined /> },
-  OBSERVATION: { label: '观察', color: 'cyan', icon: <EyeOutlined /> },
-  REFERENCE: { label: '参考', color: 'default', icon: <TeamOutlined /> }
+  OBSERVATION: { label: '观察', color: 'cyan', icon: <EyeOutlined /> }
 };
 
 interface ThoughtCardProps {
@@ -100,16 +98,6 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
               icon={contentTypeConfig[thought.contentType].icon}
             >
               {contentTypeConfig[thought.contentType].label}
-            </Tag>
-          )}
-
-          {/* 说话人标签 */}
-          {thought.speaker && (
-            <Tag
-              icon={<UserOutlined />}
-              color={thought.speaker === 'DJ' ? 'gold' : 'geekblue'}
-            >
-              {thought.speaker}
             </Tag>
           )}
 
