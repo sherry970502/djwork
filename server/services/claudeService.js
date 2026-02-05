@@ -132,8 +132,10 @@ ${content}
 【类型】TODO/CONCLUSION/DECISION/QUESTION/IDEA/OBSERVATION
 
 【必填字段】
-- originalQuote：完整讨论80-150字（问题+讨论+结论）
+- originalQuote：从会议纪要中逐字复制的原文，80-150字，包含完整讨论片段，不要改写或总结
 - context：说明(1)讨论什么事 (2)如何提出
+
+⚠️ originalQuote必须是会议纪要的原始文字，直接复制粘贴，保持原样
 
 【标签】
 ${tagList}
@@ -141,16 +143,16 @@ ${tagList}
 【会议内容】
 ${content}
 
-【输出示例】
+【输出格式】
 [{
-  "content": "AI生产线的内容生成效率需提升到日均500条",
-  "contentType": "CONCLUSION",
+  "content": "结论概括（具象，保留数据和领域）",
+  "contentType": "类型",
   "speaker": "DJ",
-  "originalQuote": "DJ提到目前AI生产线日均只能生成200条内容，但竞品已达到500条。团队讨论了算法优化方案后，他认为通过模型并行化和prompt优化，可以在下月达到500条的目标。最后决定投入2名算法工程师专门优化。",
-  "context": "讨论AI内容生产效率时，DJ基于竞品对比数据，提出需将日均产能从200条提升到500条的具体目标",
-  "confidence": 0.9,
-  "tags": ["ai_technology", "product_strategy"],
-  "isImportant": true
+  "originalQuote": "会议纪要的原文（逐字复制，80-150字）",
+  "context": "讨论背景+决策过程",
+  "confidence": 0.85,
+  "tags": ["标签name"],
+  "isImportant": false
 }]
 
 只输出JSON数组：`;
