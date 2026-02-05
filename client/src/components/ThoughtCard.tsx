@@ -49,12 +49,15 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
   const meeting = thought.meetingMinutesId as MeetingMinutes;
 
   // 调试：查看数据
+  const quote = thought.originalQuote || thought.originalSegment;
   console.log('ThoughtCard data:', {
     hasOriginalQuote: !!thought.originalQuote,
     originalQuoteLength: thought.originalQuote?.length || 0,
     hasOriginalSegment: !!thought.originalSegment,
     originalSegmentLength: thought.originalSegment?.length || 0,
-    extractionVersion: thought.extractionVersion
+    extractionVersion: thought.extractionVersion,
+    quote: quote?.substring(0, 50) + '...',
+    canClick: !!(typeof meeting === 'object' ? meeting?._id : meeting) && !!quote
   });
 
   const handleQuoteClick = () => {

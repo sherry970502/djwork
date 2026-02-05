@@ -155,7 +155,17 @@ const MeetingDetailPage: React.FC = () => {
 
     const content = meeting.content;
     const index = content.indexOf(highlightText);
+
+    // 调试信息
+    console.log('Highlight search:', {
+      highlightText: highlightText.substring(0, 50) + '...',
+      highlightLength: highlightText.length,
+      found: index !== -1,
+      index: index
+    });
+
     if (index === -1) {
+      console.warn('❌ 原文引用未在会议内容中找到');
       return content;
     }
 
