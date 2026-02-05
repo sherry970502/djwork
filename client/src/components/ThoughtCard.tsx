@@ -49,8 +49,9 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
   const meeting = thought.meetingMinutesId as MeetingMinutes;
 
   const handleQuoteClick = () => {
-    if (meeting && typeof meeting === 'object' && thought.originalQuote) {
-      navigate(`/meetings/${meeting._id}?highlight=${encodeURIComponent(thought.originalQuote)}`);
+    const quote = thought.originalQuote || thought.originalSegment;
+    if (meeting && typeof meeting === 'object' && quote) {
+      navigate(`/meetings/${meeting._id}?highlight=${encodeURIComponent(quote)}`);
     }
   };
 
