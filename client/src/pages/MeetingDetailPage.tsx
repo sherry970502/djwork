@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Button,
@@ -46,6 +46,9 @@ const statusMap: Record<string, { color: string; text: string }> = {
 const MeetingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightText = searchParams.get('highlight');
+  const contentRef = useRef<HTMLDivElement>(null);
   const [meeting, setMeeting] = useState<MeetingMinutes & { thoughts: Thought[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState<TagType[]>([]);
@@ -142,6 +145,48 @@ const MeetingDetailPage: React.FC = () => {
     } catch {
       message.error('删除失败');
     }
+  };
+
+  // 高亮并滚动到指定文本
+  useEffect(() => {
+    if (meeting && highlightText && contentRef.current) {
+      setTimeout(() => {
+        const highlightElement = contentRef.current?.querySelector('.highlight-text');
+        if (highlightElement) {
+          highlightElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [meeting, highlightText]);
+
+  // 渲染高亮内容
+  const renderContent = (content: string) => {
+    if (!highlightText) {
+      return content;
+    }
+
+    const index = content.indexOf(highlightText);
+    if (index === -1) {
+      return content;
+    }
+
+    return (
+      <>
+        {content.substring(0, index)}
+        <span
+          className="highlight-text"
+          style={{
+            backgroundColor: '#fff566',
+            padding: '2px 4px',
+            borderRadius: 2,
+            fontWeight: 500
+          }}
+        >
+          {highlightText}
+        </span>
+        {content.substring(index + highlightText.length)}
+      </>
+    );
   };
 
   if (loading) {
@@ -243,10 +288,18 @@ const MeetingDetailPage: React.FC = () => {
         <Divider />
 
         <div style={{ marginBottom: 24 }}>
-          <Title level={5}>原始内容</Title>
+          <Title level={5}>
+            原始内容
+            {highlightText && (
+              <Tag color="gold" style={{ marginLeft: 8 }}>
+                已定位到引用文本
+              </Tag>
+            )}
+          </Title>
           <div
+            ref={contentRef}
             style={{
-              maxHeight: 200,
+              maxHeight: 400,
               overflow: 'auto',
               background: '#f5f5f5',
               padding: 16,
@@ -254,7 +307,7 @@ const MeetingDetailPage: React.FC = () => {
             }}
           >
             <Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>
-              {meeting.content}
+              {renderContent(meeting.content)}
             </Paragraph>
           </div>
         </div>

@@ -13,6 +13,7 @@ import {
   EyeOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import type { Thought, MeetingMinutes } from '../types';
 
 const { Paragraph, Text } = Typography;
@@ -44,7 +45,14 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
   onViewMeeting,
   showMeeting = true
 }) => {
+  const navigate = useNavigate();
   const meeting = thought.meetingMinutesId as MeetingMinutes;
+
+  const handleQuoteClick = () => {
+    if (meeting && typeof meeting === 'object' && thought.originalQuote) {
+      navigate(`/meetings/${meeting._id}?highlight=${encodeURIComponent(thought.originalQuote)}`);
+    }
+  };
 
   return (
     <Card
@@ -130,15 +138,26 @@ const ThoughtCard: React.FC<ThoughtCardProps> = ({
       {/* 优先显示新的 originalQuote，如果没有则显示旧的 originalSegment */}
       {(thought.originalQuote || thought.originalSegment) && (
         <div
+          onClick={handleQuoteClick}
           style={{
             background: '#f5f5f5',
             padding: '8px 12px',
             borderRadius: 4,
-            marginBottom: 12
+            marginBottom: 12,
+            cursor: 'pointer',
+            transition: 'all 0.3s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#e6f7ff';
+            e.currentTarget.style.borderLeft = '3px solid #1890ff';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#f5f5f5';
+            e.currentTarget.style.borderLeft = 'none';
           }}
         >
           <Text type="secondary" style={{ fontSize: 12 }}>
-            📄 原文引用：
+            📄 原文引用（点击查看完整上下文）：
           </Text>
           <Paragraph
             type="secondary"
