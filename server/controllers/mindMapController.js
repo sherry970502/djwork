@@ -1,6 +1,9 @@
 const MindMap = require('../models/mindMap');
 const creativeDivergence = require('../services/creativeDivergence');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+
+// 生成 UUID
+const uuidv4 = () => crypto.randomUUID();
 
 // 创建思维导图
 exports.createMindMap = async (req, res) => {
