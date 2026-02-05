@@ -147,6 +147,79 @@ const MeetingDetailPage: React.FC = () => {
     }
   };
 
+  // 模糊匹配函数
+  const findTextMatch = (content: string, searchText: string) => {
+    // 策略1: 精确匹配
+    let index = content.indexOf(searchText);
+    if (index !== -1) {
+      console.log('✅ 精确匹配成功');
+      return { index, matchedText: searchText, method: 'exact' };
+    }
+
+    // 清理文本函数：去除多余空格和换行
+    const cleanText = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+    // 策略2: 清理后匹配
+    const cleanedSearch = cleanText(searchText);
+    const cleanedContent = cleanText(content);
+    index = cleanedContent.indexOf(cleanedSearch);
+    if (index !== -1) {
+      // 在原文中找到对应位置
+      let originalIndex = 0;
+      let cleanedIndex = 0;
+      for (let i = 0; i < content.length && cleanedIndex < index; i++) {
+        if (!/\s/.test(content[i]) || content[i] === ' ') {
+          cleanedIndex++;
+        }
+        originalIndex++;
+      }
+      console.log('✅ 清理后匹配成功');
+      return { index: originalIndex, matchedText: searchText, method: 'cleaned' };
+    }
+
+    // 策略3: 部分匹配（前50字符）
+    if (searchText.length > 50) {
+      const partialSearch = searchText.substring(0, 50);
+      index = content.indexOf(partialSearch);
+      if (index !== -1) {
+        console.log('✅ 部分匹配成功（前50字符）');
+        return { index, matchedText: searchText, method: 'partial' };
+      }
+
+      // 尝试清理后的部分匹配
+      const cleanedPartial = cleanText(partialSearch);
+      const cleanedIdx = cleanedContent.indexOf(cleanedPartial);
+      if (cleanedIdx !== -1) {
+        let originalIndex = 0;
+        let cleanedIndex = 0;
+        for (let i = 0; i < content.length && cleanedIndex < cleanedIdx; i++) {
+          if (!/\s/.test(content[i]) || content[i] === ' ') {
+            cleanedIndex++;
+          }
+          originalIndex++;
+        }
+        console.log('✅ 清理后部分匹配成功');
+        return { index: originalIndex, matchedText: searchText, method: 'cleaned-partial' };
+      }
+    }
+
+    // 策略4: 关键词匹配（提取最长的连续非空白字符串）
+    const keywords = searchText.split(/\s+/).filter(w => w.length > 3).slice(0, 5);
+    for (const keyword of keywords) {
+      index = content.indexOf(keyword);
+      if (index !== -1) {
+        console.log('✅ 关键词匹配成功:', keyword);
+        // 扩展到前后各100字符
+        const start = Math.max(0, index - 100);
+        const end = Math.min(content.length, index + keyword.length + 100);
+        return { index: start, matchedText: content.substring(start, end), method: 'keyword' };
+      }
+    }
+
+    console.warn('❌ 所有匹配策略均失败');
+    return null;
+  };
+
   // 渲染高亮内容 - 使用 useMemo 确保响应 highlightText 变化
   const renderedContent = React.useMemo(() => {
     if (!meeting || !highlightText) {
@@ -154,20 +227,21 @@ const MeetingDetailPage: React.FC = () => {
     }
 
     const content = meeting.content;
-    const index = content.indexOf(highlightText);
+    const matchResult = findTextMatch(content, highlightText);
 
     // 调试信息
     console.log('Highlight search:', {
       highlightText: highlightText.substring(0, 50) + '...',
       highlightLength: highlightText.length,
-      found: index !== -1,
-      index: index
+      found: !!matchResult,
+      method: matchResult?.method
     });
 
-    if (index === -1) {
-      console.warn('❌ 原文引用未在会议内容中找到');
+    if (!matchResult) {
       return content;
     }
+
+    const { index, matchedText } = matchResult;
 
     return (
       <>
@@ -182,9 +256,9 @@ const MeetingDetailPage: React.FC = () => {
             fontWeight: 500
           }}
         >
-          {highlightText}
+          {matchedText}
         </span>
-        {content.substring(index + highlightText.length)}
+        {content.substring(index + matchedText.length)}
       </>
     );
   }, [meeting, highlightText]);
