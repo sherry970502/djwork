@@ -139,6 +139,10 @@ exports.divergeNode = async (req, res) => {
       .filter(n => n.isMarked)
       .map(n => n.content);
 
+    // 找到根节点（原始需求）
+    const rootNode = mindMap.nodes.find(n => n.level === 0);
+    const rootContent = rootNode ? rootNode.content : '';
+
     // AI 发散
     const ideas = await creativeDivergence.divergeFromNode(
       currentNode.content,
@@ -146,7 +150,8 @@ exports.divergeNode = async (req, res) => {
         parentNodes,
         markedNodes,
         level: currentNode.level + 1,
-        isRoot: currentNode.level === 0
+        isRoot: currentNode.level === 0,
+        rootContent
       }
     );
 

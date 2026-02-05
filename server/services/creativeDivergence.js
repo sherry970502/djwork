@@ -8,7 +8,7 @@ class CreativeDivergenceService {
    * @returns {Promise<Array>} 发散的创意节点
    */
   async divergeFromNode(nodeContent, context = {}) {
-    const { parentNodes = [], markedNodes = [], level = 1, isRoot = false } = context;
+    const { parentNodes = [], markedNodes = [], level = 1, isRoot = false, rootContent = '' } = context;
 
     let prompt;
 
@@ -33,6 +33,10 @@ class CreativeDivergenceService {
 只输出JSON数组，不要其他内容。`;
     } else {
       // 子节点：基于当前节点深入发散
+      const rootInfo = rootContent
+        ? `\n\n⚠️ 原始需求：${rootContent}\n所有创意必须紧扣这个原始需求，不能偏离主题！`
+        : '';
+
       const contextInfo = parentNodes.length > 0
         ? `\n\n探索路径：${parentNodes.join(' → ')} → ${nodeContent}`
         : '';
@@ -41,19 +45,25 @@ class CreativeDivergenceService {
         ? `\n\n用户特别感兴趣的方向：${markedNodes.join(', ')}`
         : '';
 
-      prompt = `你是创意发散助手。基于当前创意节点，提供3-5个发散方向。
+      prompt = `你是创意发散助手。基于当前创意节点，提供3-5个发散方向。${rootInfo}
 
 当前节点：${nodeContent}${contextInfo}${interestInfo}
 
+⚠️ 核心约束：
+- 所有创意必须服务于原始需求"${rootContent || nodeContent}"
+- 不能偏离主题（例如原始需求是"雕像"就不能变成"绘画"）
+- 向上追溯，确保与父节点和根节点逻辑一致
+
 发散策略：
-1. 横向发散（同级的其他可能）：如果这个方向不行，还可以怎么做？
-2. 纵向发散（深入细化）：这个想法可以如何具体实现？
+1. 横向发散（同级的其他可能）：在当前方向下，还有哪些平行的选择？
+2. 纵向发散（深入细化）：这个想法可以如何具体实现和落地？
 3. 结合用户兴趣，提供更符合用户偏好的建议
 
 要求：
 - 提供3-5个创意，横向和纵向都要有
 - 每个创意10-20字，简洁有力
 - 既要创新，也要实用
+- 必须与原始需求"${rootContent || nodeContent}"高度相关
 - type: "horizontal" (横向) 或 "vertical" (纵向)
 
 输出JSON格式：

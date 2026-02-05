@@ -51,7 +51,6 @@ import {
 } from '@ant-design/icons';
 import type { PersonalDesign, DesignDimension, DimensionIdeaResult, CreativeProposal, ClarifyingQA } from '../types';
 import * as api from '../services/api';
-import MindMapCanvas from '../components/MindMap/MindMapCanvas';
 
 const { TextArea } = Input;
 const { Option } = Select;

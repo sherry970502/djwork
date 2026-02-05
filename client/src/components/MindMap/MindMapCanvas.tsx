@@ -385,8 +385,9 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
           animated: true,
         }}
         onNodeClick={(_, node) => {
-          // 点击节点自动发散
-          if (node.data.level === 0 || !node.data.isAIGenerated) {
+          // 点击节点自动发散（如果还没有子节点）
+          const hasChildren = edges.some((e) => e.source === node.id);
+          if (!hasChildren && !diverging) {
             handleDiverge(node.id);
           }
         }}
