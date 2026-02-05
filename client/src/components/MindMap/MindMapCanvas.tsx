@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -41,6 +41,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [mindMapId, setMindMapId] = useState<string | null>(null);
+  const mindMapIdRef = useRef<string | null>(null); // 使用 ref 存储最新的 mindMapId
   const [loading, setLoading] = useState(true);
   const [diverging, setDiverging] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -53,8 +54,9 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
     loadMindMap();
   }, [designId]);
 
-  // 调试：监听 mindMapId 变化
+  // 同步 mindMapId 到 ref，确保回调函数总能访问到最新值
   useEffect(() => {
+    mindMapIdRef.current = mindMapId;
     console.log('mindMapId changed:', mindMapId);
   }, [mindMapId]);
 
@@ -124,8 +126,9 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
   // 标记/取消标记
   const handleToggleMark = async (nodeId: string) => {
-    console.log('handleToggleMark called:', nodeId, 'mindMapId:', mindMapId);
-    if (!mindMapId) {
+    const currentMindMapId = mindMapIdRef.current;
+    console.log('handleToggleMark called:', nodeId, 'mindMapId:', currentMindMapId);
+    if (!currentMindMapId) {
       message.warning('思维导图未加载');
       return;
     }
@@ -137,7 +140,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
     }
 
     try {
-      await updateMindMapNode(mindMapId, nodeId, {
+      await updateMindMapNode(currentMindMapId, nodeId, {
         isMarked: !node.data.isMarked,
       });
 
@@ -158,8 +161,9 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
   // AI 发散
   const handleDiverge = async (nodeId: string) => {
-    console.log('handleDiverge called:', nodeId, 'mindMapId:', mindMapId, 'diverging:', diverging);
-    if (!mindMapId) {
+    const currentMindMapId = mindMapIdRef.current;
+    console.log('handleDiverge called:', nodeId, 'mindMapId:', currentMindMapId, 'diverging:', diverging);
+    if (!currentMindMapId) {
       message.warning('思维导图未加载');
       return;
     }
@@ -172,7 +176,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
       setDiverging(true);
       message.loading('AI 正在发散创意...', 0);
 
-      const response = await divergeNode(mindMapId, nodeId);
+      const response = await divergeNode(currentMindMapId, nodeId);
       console.log('Diverge response:', response);
 
       // 添加新节点和边
@@ -220,7 +224,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
   // 删除节点
   const handleDeleteNode = async (nodeId: string) => {
-    if (!mindMapId) return;
+    const currentMindMapId = mindMapIdRef.current;
+    if (!currentMindMapId) return;
 
     Modal.confirm({
       title: '确定删除此节点？',
@@ -229,7 +234,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
       cancelText: '取消',
       onOk: async () => {
         try {
-          const response = await deleteMindMapNode(mindMapId, nodeId);
+          const response = await deleteMindMapNode(currentMindMapId, nodeId);
 
           // 移除节点和边
           const deletedIds = response.data.deletedNodes;
@@ -250,10 +255,11 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
   // 编辑节点
   const handleEditNode = async (nodeId: string, content: string) => {
-    if (!mindMapId) return;
+    const currentMindMapId = mindMapIdRef.current;
+    if (!currentMindMapId) return;
 
     try {
-      await updateMindMapNode(mindMapId, nodeId, { content });
+      await updateMindMapNode(currentMindMapId, nodeId, { content });
 
       setNodes((nds) =>
         nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, label: content } } : n))
@@ -272,10 +278,11 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
   // 手动添加节点
   const handleAddManualNode = async () => {
-    if (!mindMapId || !selectedParentId || !newNodeContent.trim()) return;
+    const currentMindMapId = mindMapIdRef.current;
+    if (!currentMindMapId || !selectedParentId || !newNodeContent.trim()) return;
 
     try {
-      const response = await addManualNode(mindMapId, {
+      const response = await addManualNode(currentMindMapId, {
         parentId: selectedParentId,
         content: newNodeContent.trim(),
       });
@@ -324,19 +331,22 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
       // 保存位置变化
       changes.forEach(async (change) => {
-        if (change.type === 'position' && change.position && !change.dragging && mindMapId) {
-          const nodeId = change.id;
-          try {
-            await updateMindMapNode(mindMapId, nodeId, {
-              position: change.position,
-            });
-          } catch (error) {
-            console.error('Failed to update position:', error);
+        if (change.type === 'position' && change.position && !change.dragging) {
+          const currentMindMapId = mindMapIdRef.current;
+          if (currentMindMapId) {
+            const nodeId = change.id;
+            try {
+              await updateMindMapNode(currentMindMapId, nodeId, {
+                position: change.position,
+              });
+            } catch (error) {
+              console.error('Failed to update position:', error);
+            }
           }
         }
       });
     },
-    [mindMapId, onNodesChange]
+    [onNodesChange]
   );
 
   // 过滤显示
