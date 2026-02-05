@@ -1166,20 +1166,6 @@ const PersonalDesignsPage: React.FC = () => {
             >
               {renderProposals(selectedDesign.creativeProposals)}
             </TabPane>
-
-            <TabPane
-              tab={
-                <span>
-                  <ThunderboltOutlined /> 创意发散
-                </span>
-              }
-              key="mindmap"
-            >
-              <MindMapCanvas
-                designId={selectedDesign._id}
-                designTitle={selectedDesign.title}
-              />
-            </TabPane>
           </Tabs>
         )}
       </Modal>
