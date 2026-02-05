@@ -147,24 +147,13 @@ const MeetingDetailPage: React.FC = () => {
     }
   };
 
-  // 高亮并滚动到指定文本
-  useEffect(() => {
-    if (meeting && highlightText && contentRef.current) {
-      setTimeout(() => {
-        const highlightElement = contentRef.current?.querySelector('.highlight-text');
-        if (highlightElement) {
-          highlightElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
-  }, [meeting, highlightText]);
-
-  // 渲染高亮内容
-  const renderContent = (content: string) => {
-    if (!highlightText) {
-      return content;
+  // 渲染高亮内容 - 使用 useMemo 确保响应 highlightText 变化
+  const renderedContent = React.useMemo(() => {
+    if (!meeting || !highlightText) {
+      return meeting?.content || '';
     }
 
+    const content = meeting.content;
     const index = content.indexOf(highlightText);
     if (index === -1) {
       return content;
@@ -174,6 +163,7 @@ const MeetingDetailPage: React.FC = () => {
       <>
         {content.substring(0, index)}
         <span
+          key={highlightText}
           className="highlight-text"
           style={{
             backgroundColor: '#fff566',
@@ -187,7 +177,20 @@ const MeetingDetailPage: React.FC = () => {
         {content.substring(index + highlightText.length)}
       </>
     );
-  };
+  }, [meeting, highlightText]);
+
+  // 高亮并滚动到指定文本
+  useEffect(() => {
+    if (meeting && highlightText && contentRef.current) {
+      // 延迟确保 DOM 已更新
+      setTimeout(() => {
+        const highlightElement = contentRef.current?.querySelector('.highlight-text');
+        if (highlightElement) {
+          highlightElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 200);
+    }
+  }, [meeting, highlightText]);
 
   if (loading) {
     return (
@@ -307,7 +310,7 @@ const MeetingDetailPage: React.FC = () => {
             }}
           >
             <Paragraph style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>
-              {renderContent(meeting.content)}
+              {renderedContent}
             </Paragraph>
           </div>
         </div>
