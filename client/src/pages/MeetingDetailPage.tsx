@@ -156,6 +156,41 @@ const MeetingDetailPage: React.FC = () => {
       return { index, matchedText: searchText, method: 'exact' };
     }
 
+    // 标准化文本函数：统一标点符号和空格
+    const normalizeText = (text: string) => {
+      return text
+        .replace(/\s+/g, ' ')  // 多个空格变一个
+        .replace(/，/g, ',')    // 中文逗号 → 英文逗号
+        .replace(/。/g, '.')    // 中文句号 → 英文句号
+        .replace(/！/g, '!')    // 中文感叹号 → 英文感叹号
+        .replace(/？/g, '?')    // 中文问号 → 英文问号
+        .replace(/；/g, ';')    // 中文分号 → 英文分号
+        .replace(/：/g, ':')    // 中文冒号 → 英文冒号
+        .replace(/…+/g, '...')  // 省略号 → 三个点
+        .replace(/["""]/g, '"') // 各种引号 → 双引号
+        .replace(/[''']/g, "'") // 各种单引号 → 单引号
+        .trim();
+    };
+
+    // 策略2: 标准化后匹配
+    const normalizedSearch = normalizeText(searchText);
+    const normalizedContent = normalizeText(content);
+    index = normalizedContent.indexOf(normalizedSearch);
+    if (index !== -1) {
+      // 在原文中找到对应位置（简化版：直接搜索前10个字符）
+      const prefix = searchText.substring(0, Math.min(10, searchText.length));
+      const prefixNormalized = normalizeText(prefix);
+      let originalIndex = 0;
+      for (let i = 0; i < content.length; i++) {
+        if (normalizeText(content.substring(i, i + prefix.length)).startsWith(prefixNormalized)) {
+          originalIndex = i;
+          break;
+        }
+      }
+      console.log('✅ 标准化后匹配成功');
+      return { index: originalIndex, matchedText: searchText, method: 'normalized' };
+    }
+
     // 清理文本函数：去除多余空格和换行
     const cleanText = (text: string) => text.replace(/\s+/g, ' ').trim();
 
