@@ -133,17 +133,29 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
       return;
     }
 
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) {
-      message.warning('节点不存在');
-      return;
-    }
-
     try {
-      await updateMindMapNode(currentMindMapId, nodeId, {
-        isMarked: !node.data.isMarked,
+      // 乐观更新 UI - 立即切换状态，使用函数式更新获取最新 nodes
+      let wasMarked = false;
+      setNodes((nds) => {
+        const updatedNodes = nds.map((n) => {
+          if (n.id === nodeId) {
+            wasMarked = n.data.isMarked;
+            return { ...n, data: { ...n.data, isMarked: !n.data.isMarked } };
+          }
+          return n;
+        });
+        return updatedNodes;
       });
 
+      // 更新后端
+      await updateMindMapNode(currentMindMapId, nodeId, {
+        isMarked: !wasMarked,
+      });
+
+      message.success(wasMarked ? '已取消标记' : '已标记 ⭐');
+    } catch (error: any) {
+      console.error('Toggle mark error:', error);
+      // API 失败，回滚 UI 状态
       setNodes((nds) =>
         nds.map((n) =>
           n.id === nodeId
@@ -151,10 +163,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
             : n
         )
       );
-
-      message.success(node.data.isMarked ? '已取消标记' : '已标记 ⭐');
-    } catch (error: any) {
-      console.error('Toggle mark error:', error);
       message.error('操作失败: ' + (error.response?.data?.message || error.message));
     }
   };
