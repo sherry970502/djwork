@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('dj_authenticated') === 'true';
   });
+  const [collapsed, setCollapsed] = useState(false);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
@@ -188,9 +189,12 @@ const App: React.FC = () => {
       <Layout style={{ minHeight: '100vh' }}>
         <Sider
           width={240}
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
           className="modern-sider"
           breakpoint="lg"
-          collapsedWidth="0"
+          collapsedWidth="80"
         >
           <div className="logo-container">
             <span className="logo-text">DJ 工作事务系统</span>

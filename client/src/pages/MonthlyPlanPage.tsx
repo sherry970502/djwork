@@ -65,7 +65,7 @@ const projectLabels: Record<string, { label: string; color: string; icon: React.
   company_management: { label: '公司管理', color: '#722ed1', icon: <BankOutlined /> },
   education: { label: '教育', color: '#1890ff', icon: <BookOutlined /> },
   gaming: { label: '游戏', color: '#52c41a', icon: <ThunderboltOutlined /> },
-  other: { label: '其他', color: '#8c8c8c', icon: <AppstoreOutlined /> }
+  other: { label: '其他', color: '#8c8c8c', icon: <QuestionCircleOutlined /> }
 };
 
 const categoryLabels: Record<string, string> = {
@@ -357,7 +357,7 @@ const MonthlyPlanPage: React.FC = () => {
   // 按项目分类过滤
   const filteredItems = plan?.items?.filter((item: any) => {
     if (activeProject === 'all') return true;
-    return item.project === activeProject;
+    return (item.project || 'other') === activeProject;
   }) || [];
 
   // 计算下个月
@@ -1045,7 +1045,7 @@ const MonthlyPlanPage: React.FC = () => {
               <Space>
                 {tab.icon}
                 {tab.label}
-                <Tag>{plan?.items?.filter((i: any) => tab.key === 'all' || i.project === tab.key).length || 0}</Tag>
+                <Tag>{plan?.items?.filter((i: any) => tab.key === 'all' || (i.project || 'other') === tab.key).length || 0}</Tag>
               </Space>
             )
           }))}
