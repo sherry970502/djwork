@@ -89,13 +89,19 @@ const CreativeNode: React.FC<NodeProps<CreativeNodeData>> = ({ id, data, selecte
       key: 'mark',
       icon: data.isMarked ? <StarFilled /> : <StarOutlined />,
       label: data.isMarked ? '取消标记' : '⭐ 标记创意',
-      onClick: () => data.onToggleMark?.(id),
+      onClick: () => {
+        console.log('Mark menu item clicked, id:', id, 'callback exists:', !!data.onToggleMark);
+        data.onToggleMark?.(id);
+      },
     },
     {
       key: 'diverge',
       icon: <ThunderboltOutlined />,
       label: '🤖 AI发散',
-      onClick: () => data.onDiverge?.(id),
+      onClick: () => {
+        console.log('Diverge menu item clicked, id:', id, 'callback exists:', !!data.onDiverge);
+        data.onDiverge?.(id);
+      },
     },
     {
       key: 'add',

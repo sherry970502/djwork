@@ -113,10 +113,17 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
   // 标记/取消标记
   const handleToggleMark = async (nodeId: string) => {
-    if (!mindMapId) return;
+    console.log('handleToggleMark called:', nodeId, 'mindMapId:', mindMapId);
+    if (!mindMapId) {
+      message.warning('思维导图未加载');
+      return;
+    }
 
     const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return;
+    if (!node) {
+      message.warning('节点不存在');
+      return;
+    }
 
     try {
       await updateMindMapNode(mindMapId, nodeId, {
@@ -133,19 +140,29 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
       message.success(node.data.isMarked ? '已取消标记' : '已标记 ⭐');
     } catch (error: any) {
-      message.error('操作失败');
+      console.error('Toggle mark error:', error);
+      message.error('操作失败: ' + (error.response?.data?.message || error.message));
     }
   };
 
   // AI 发散
   const handleDiverge = async (nodeId: string) => {
-    if (!mindMapId || diverging) return;
+    console.log('handleDiverge called:', nodeId, 'mindMapId:', mindMapId, 'diverging:', diverging);
+    if (!mindMapId) {
+      message.warning('思维导图未加载');
+      return;
+    }
+    if (diverging) {
+      message.warning('正在发散中，请稍候');
+      return;
+    }
 
     try {
       setDiverging(true);
       message.loading('AI 正在发散创意...', 0);
 
       const response = await divergeNode(mindMapId, nodeId);
+      console.log('Diverge response:', response);
 
       // 添加新节点和边
       const newFlowNodes: Node[] = response.data.nodes.map((node: any) => ({
@@ -181,8 +198,10 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
       message.destroy();
       message.success(`✨ 已发散 ${newFlowNodes.length} 个创意方向`);
     } catch (error: any) {
+      console.error('Diverge error:', error);
       message.destroy();
-      message.error('发散失败: ' + error.message);
+      const errorMsg = error.response?.data?.message || error.message || '未知错误';
+      message.error('发散失败: ' + errorMsg);
     } finally {
       setDiverging(false);
     }
