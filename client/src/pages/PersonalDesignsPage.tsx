@@ -51,6 +51,7 @@ import {
 } from '@ant-design/icons';
 import type { PersonalDesign, DesignDimension, DimensionIdeaResult, CreativeProposal, ClarifyingQA } from '../types';
 import * as api from '../services/api';
+import MindMapCanvas from '../components/MindMap/MindMapCanvas';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -1165,6 +1166,20 @@ const PersonalDesignsPage: React.FC = () => {
               key="proposals"
             >
               {renderProposals(selectedDesign.creativeProposals)}
+            </TabPane>
+
+            <TabPane
+              tab={
+                <span>
+                  <ThunderboltOutlined /> 创意发散
+                </span>
+              }
+              key="mindmap"
+            >
+              <MindMapCanvas
+                designId={selectedDesign._id}
+                designTitle={selectedDesign.title}
+              />
             </TabPane>
           </Tabs>
         )}
