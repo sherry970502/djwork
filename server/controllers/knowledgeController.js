@@ -103,11 +103,13 @@ exports.rateQA = async (req, res) => {
 // Generate monthly insight
 exports.generateMonthlyInsight = async (req, res) => {
   try {
+    console.log('Generate monthly insight request:', req.body);
     const { month } = req.body;
 
     // Validate month format
     const monthRegex = /^\d{4}-\d{2}$/;
     if (!month || !monthRegex.test(month)) {
+      console.error('Invalid month format:', month);
       return res.status(400).json({
         success: false,
         message: 'Month must be in YYYY-MM format'
@@ -222,9 +224,12 @@ exports.generateMonthlyInsight = async (req, res) => {
       data: insight
     });
   } catch (error) {
+    console.error('Generate monthly insight error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
