@@ -1028,8 +1028,20 @@ const MonthlyPlanPage: React.FC = () => {
             <Divider style={{ margin: '16px 0' }} />
             <Row gutter={16}>
               <Col span={24}>
-                <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <strong style={{ fontSize: 14, color: '#333' }}>AI 复盘结论</strong>
+                  <Space size={8}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>来源统计：</Text>
+                    <Tag color="blue" style={{ fontSize: 12 }}>
+                      <ThunderboltOutlined /> 组织事务 {plan.items.filter((i: any) => i.sourceType === 'task').length}
+                    </Tag>
+                    <Tag color="green" style={{ fontSize: 12 }}>
+                      <BulbOutlined /> AI 议题 {plan.items.filter((i: any) => i.sourceType === 'topic').length}
+                    </Tag>
+                    <Tag color="purple" style={{ fontSize: 12 }}>
+                      <HistoryOutlined /> 上月继承 {plan.items.filter((i: any) => i.sourceType === 'migrated').length}
+                    </Tag>
+                  </Space>
                 </div>
                 <Space size={16} wrap>
                   <Tag color="success" style={{ padding: '4px 12px', fontSize: 14 }}>
