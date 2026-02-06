@@ -64,9 +64,19 @@ exports.syncMonthlyPlan = async (req, res) => {
       createdAt: { $gte: startDate, $lt: endDate }
     });
 
-    // 2. 获取该月的 MonthlyInsight 中已接受的议题
-    const insight = await MonthlyInsight.findOne({ month });
-    console.log('🔍 [同步调试] 查找月度洞察:', { month, insightFound: !!insight });
+    // 2. 获取上个月的 MonthlyInsight 中已接受的议题
+    // 逻辑：N月的洞察（N月底生成）→ 指导N+1月的工作
+    // 例如：2026-01的洞察 → 同步到2026-02的计划
+    const [year, monthNum] = month.split('-').map(Number);
+    const prevMonthDate = new Date(year, monthNum - 2, 1); // monthNum-2 因为月份从0开始
+    const prevMonth = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+    const insight = await MonthlyInsight.findOne({ month: prevMonth });
+    console.log('🔍 [同步调试] 查找月度洞察:', {
+      当前月份: month,
+      查找洞察月份: prevMonth,
+      insightFound: !!insight
+    });
 
     if (insight) {
       console.log('📊 [同步调试] 议题统计:', {
