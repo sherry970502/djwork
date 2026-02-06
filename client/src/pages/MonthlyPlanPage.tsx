@@ -1224,6 +1224,61 @@ const MonthlyPlanPage: React.FC = () => {
               </Card>
             )}
 
+            {/* 组织事务的 AI 分析建议 */}
+            {selectedItem.sourceType === 'task' && selectedItem.taskDetail?.analysis && (
+              <Card
+                size="small"
+                title={
+                  <Space>
+                    <ThunderboltOutlined style={{ color: '#722ed1' }} />
+                    组织事务 AI 分析建议
+                  </Space>
+                }
+                style={{ marginBottom: 16 }}
+              >
+                <div style={{ background: '#f6f8fa', padding: 12, borderRadius: 6, marginBottom: 12 }}>
+                  <Text strong style={{ fontSize: 15, color: '#1890ff' }}>
+                    💡 {selectedItem.taskDetail.analysis.recommendation.summary}
+                  </Text>
+                </div>
+
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong>What - 做什么：</Text>
+                  <div style={{ marginTop: 4, paddingLeft: 12 }}>
+                    <Text>{selectedItem.taskDetail.analysis.recommendation.whatToDo}</Text>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong>Why - 为什么做：</Text>
+                  <div style={{ marginTop: 4, paddingLeft: 12 }}>
+                    <Text>{selectedItem.taskDetail.analysis.recommendation.whyToDo}</Text>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong>Where - 核心抓手：</Text>
+                  <div style={{ marginTop: 4, paddingLeft: 12 }}>
+                    <Text>{selectedItem.taskDetail.analysis.recommendation.whereToFocus}</Text>
+                  </div>
+                </div>
+
+                <div>
+                  <Text strong>How Much - 代价与回报：</Text>
+                  <div style={{ marginTop: 4, paddingLeft: 12 }}>
+                    <Text>{selectedItem.taskDetail.analysis.recommendation.costAndReturn}</Text>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, padding: 8, background: '#fff7e6', borderRadius: 4, borderLeft: '3px solid #faad14' }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    💼 推荐角色：{selectedItem.taskDetail.djRoleLabel || '未分类'}
+                    {selectedItem.taskDetail.djRoleReason && ` · ${selectedItem.taskDetail.djRoleReason}`}
+                  </Text>
+                </div>
+              </Card>
+            )}
+
             <Divider>AI 复盘报告</Divider>
             {renderItemReviewDetail(selectedItem)}
           </div>

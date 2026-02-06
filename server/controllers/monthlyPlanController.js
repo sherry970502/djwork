@@ -26,9 +26,36 @@ exports.getMonthlyPlan = async (req, res) => {
       await plan.save();
     }
 
+    // 手动 populate referenceId，因为不同的 sourceType 指向不同的 collection
+    const planObj = plan.toObject();
+
+    for (let i = 0; i < planObj.items.length; i++) {
+      const item = planObj.items[i];
+
+      if (item.sourceType === 'task') {
+        // 从组织事务池获取完整数据（包括 AI 分析）
+        const task = await OrganizationTask.findById(item.referenceId);
+        if (task) {
+          planObj.items[i].taskDetail = task;
+        }
+      } else if (item.sourceType === 'topic') {
+        // 从月度洞察获取议题详情
+        // topic 的 referenceId 是议题的 _id，需要从洞察中查找
+        const insight = await MonthlyInsight.findOne({
+          'suggestedTopics._id': item.referenceId
+        });
+        if (insight) {
+          const topic = insight.suggestedTopics.id(item.referenceId);
+          if (topic) {
+            planObj.items[i].topicDetail = topic;
+          }
+        }
+      }
+    }
+
     res.json({
       success: true,
-      data: plan
+      data: planObj
     });
   } catch (error) {
     console.error('获取月度计划失败:', error);
