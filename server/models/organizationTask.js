@@ -115,6 +115,12 @@ const organizationTaskSchema = new mongoose.Schema({
     enum: ['pending', 'analyzing', 'completed', 'archived'],
     default: 'pending'
   },
+  // 实际执行状态（与月度计划同步）
+  executionStatus: {
+    type: String,
+    enum: ['pending', 'in_progress', 'completed', 'deferred', 'migrated'],
+    default: 'pending'
+  },
   dueDate: {
     type: Date,
     default: null
@@ -146,6 +152,7 @@ const organizationTaskSchema = new mongoose.Schema({
 
 // Indexes
 organizationTaskSchema.index({ status: 1 });
+organizationTaskSchema.index({ executionStatus: 1 });
 organizationTaskSchema.index({ category: 1 });
 organizationTaskSchema.index({ createdAt: -1 });
 organizationTaskSchema.index({ dueDate: 1 });

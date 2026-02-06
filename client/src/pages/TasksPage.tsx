@@ -70,6 +70,15 @@ const statusMap: Record<string, { color: string; text: string }> = {
   archived: { color: 'default', text: '已归档' }
 };
 
+// 执行状态映射
+const executionStatusMap: Record<string, { color: string; text: string; icon: string }> = {
+  pending: { color: 'default', text: '待处理', icon: '⏸️' },
+  in_progress: { color: 'processing', text: '进行中', icon: '🔄' },
+  completed: { color: 'success', text: '已完成', icon: '✅' },
+  deferred: { color: 'warning', text: '已推迟', icon: '⏰' },
+  migrated: { color: 'purple', text: '已迁移', icon: '📤' }
+};
+
 // DJ 角色映射
 const djRoleMap: Record<string, { color: string; text: string; icon: string }> = {
   manager: { color: 'red', text: '管理者', icon: '👔' },
@@ -218,13 +227,28 @@ const TasksPage: React.FC = () => {
       }
     },
     {
-      title: '状态',
+      title: 'AI分析',
       dataIndex: 'status',
       key: 'status',
       width: 100,
       render: status => {
         const { color, text } = statusMap[status];
         return <Tag color={color}>{text}</Tag>;
+      }
+    },
+    {
+      title: '执行状态',
+      dataIndex: 'executionStatus',
+      key: 'executionStatus',
+      width: 110,
+      render: (executionStatus) => {
+        const status = executionStatus || 'pending';
+        const { color, text, icon } = executionStatusMap[status];
+        return (
+          <Tag color={color} icon={<span style={{ marginRight: 4 }}>{icon}</span>}>
+            {text}
+          </Tag>
+        );
       }
     },
     {

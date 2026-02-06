@@ -156,6 +156,7 @@ export interface OrganizationTask {
   category: 'business' | 'organization' | 'strategy' | 'brand' | 'unknown';
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'analyzing' | 'completed' | 'archived';
+  executionStatus?: 'pending' | 'in_progress' | 'completed' | 'deferred' | 'migrated';
   dueDate?: string;
   // DJ 角色
   djRole?: 'manager' | 'lead_designer' | 'mentor' | 'expert' | 'unknown';

@@ -160,7 +160,23 @@ exports.updatePlanItem = async (req, res) => {
       });
     }
 
-    if (planStatus) item.planStatus = planStatus;
+    if (planStatus) {
+      item.planStatus = planStatus;
+
+      // 同步更新原始任务的执行状态
+      if (item.sourceType === 'task' && item.referenceId) {
+        try {
+          await OrganizationTask.findByIdAndUpdate(
+            item.referenceId,
+            { executionStatus: planStatus },
+            { new: true }
+          );
+        } catch (error) {
+          console.error('同步任务执行状态失败:', error);
+          // 不中断主流程，只记录错误
+        }
+      }
+    }
     if (notes !== undefined) item.notes = notes;
 
     // 更新统计
