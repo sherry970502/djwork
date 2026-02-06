@@ -66,12 +66,41 @@ exports.syncMonthlyPlan = async (req, res) => {
 
     // 2. 获取该月的 MonthlyInsight 中已接受的议题
     const insight = await MonthlyInsight.findOne({ month });
+    console.log('🔍 [同步调试] 查找月度洞察:', { month, insightFound: !!insight });
+
+    if (insight) {
+      console.log('📊 [同步调试] 议题统计:', {
+        总议题数: insight.suggestedTopics?.length || 0,
+        议题状态分布: insight.suggestedTopics?.reduce((acc, t) => {
+          acc[t.status] = (acc[t.status] || 0) + 1;
+          return acc;
+        }, {})
+      });
+    }
+
     const acceptedTopics = insight?.suggestedTopics?.filter(t => t.status === 'accepted') || [];
+    console.log('✅ [同步调试] 已接受议题:', {
+      数量: acceptedTopics.length,
+      议题列表: acceptedTopics.map(t => ({
+        _id: t._id?.toString(),
+        title: t.title,
+        status: t.status
+      }))
+    });
 
     // 获取或创建月度计划
     let plan = await MonthlyPlan.findOne({ month });
     if (!plan) {
       plan = new MonthlyPlan({ month, items: [] });
+      console.log('🆕 [同步调试] 创建新的月度计划');
+    } else {
+      console.log('📋 [同步调试] 找到已有月度计划:', {
+        现有项目数: plan.items.length,
+        项目类型分布: plan.items.reduce((acc, item) => {
+          acc[item.sourceType] = (acc[item.sourceType] || 0) + 1;
+          return acc;
+        }, {})
+      });
     }
 
     // 获取已存在的项目 ID
@@ -85,6 +114,12 @@ exports.syncMonthlyPlan = async (req, res) => {
         .filter(item => item.sourceType === 'topic')
         .map(item => item.referenceId.toString())
     );
+
+    console.log('🔑 [同步调试] 已存在ID:', {
+      任务数: existingTaskIds.size,
+      议题数: existingTopicIds.size,
+      议题IDs: Array.from(existingTopicIds)
+    });
 
     // 添加新的事务
     let addedCount = 0;
@@ -104,8 +139,16 @@ exports.syncMonthlyPlan = async (req, res) => {
     }
 
     // 添加新的议题
+    let topicAddedCount = 0;
     for (const topic of acceptedTopics) {
-      if (!existingTopicIds.has(topic._id.toString())) {
+      const topicIdStr = topic._id.toString();
+      console.log('🎯 [同步调试] 处理议题:', {
+        _id: topicIdStr,
+        title: topic.title,
+        已存在: existingTopicIds.has(topicIdStr)
+      });
+
+      if (!existingTopicIds.has(topicIdStr)) {
         plan.items.push({
           sourceType: 'topic',
           referenceId: topic._id,
@@ -115,9 +158,20 @@ exports.syncMonthlyPlan = async (req, res) => {
           priority: topic.priority,
           planStatus: 'pending'
         });
+        topicAddedCount++;
         addedCount++;
+        console.log('➕ [同步调试] 新增议题到计划');
+      } else {
+        console.log('⏭️  [同步调试] 跳过已存在的议题');
       }
     }
+
+    console.log('📈 [同步调试] 同步结果:', {
+      新增任务: addedCount - topicAddedCount,
+      新增议题: topicAddedCount,
+      总新增: addedCount,
+      最终项目数: plan.items.length
+    });
 
     plan.lastSyncAt = new Date();
     plan.monthlySummary.totalItems = plan.items.length;
