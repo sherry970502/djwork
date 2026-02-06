@@ -24,7 +24,8 @@ import {
   Tabs,
   Checkbox,
   Radio,
-  Dropdown
+  Dropdown,
+  Typography
 } from 'antd';
 import {
   PlusOutlined,
@@ -59,6 +60,7 @@ import * as api from '../services/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
+const { Text } = Typography;
 
 // 四大项目分类
 const projectLabels: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
