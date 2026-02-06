@@ -182,21 +182,21 @@ const TasksPage: React.FC = () => {
       title: '任务标题',
       dataIndex: 'title',
       key: 'title',
+      width: 280,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text, record) => (
-        <a onClick={() => handleViewDetail(record._id)} style={{ fontWeight: 500 }}>{text}</a>
+        <Tooltip placement="topLeft" title={text}>
+          <a onClick={() => handleViewDetail(record._id)} style={{ fontWeight: 500 }}>{text}</a>
+        </Tooltip>
       )
-    },
-    {
-      title: '来源',
-      dataIndex: 'source',
-      key: 'source',
-      width: 120
     },
     {
       title: '类型',
       dataIndex: 'category',
       key: 'category',
-      width: 120,
+      width: 100,
       render: category => {
         const { color, text } = categoryMap[category] || categoryMap.unknown;
         return <Tag color={color}>{text}</Tag>;
@@ -206,13 +206,15 @@ const TasksPage: React.FC = () => {
       title: 'DJ角色',
       dataIndex: 'djRole',
       key: 'djRole',
-      width: 130,
+      width: 120,
       render: (djRole, record: OrganizationTask) => {
         const role = djRoleMap[djRole || 'unknown'] || djRoleMap.unknown;
         return (
-          <Tag color={role.color} title={record.djRoleReason}>
-            {role.icon} {record.djRoleLabel || role.text}
-          </Tag>
+          <Tooltip title={record.djRoleReason}>
+            <Tag color={role.color}>
+              {role.icon} {record.djRoleLabel || role.text}
+            </Tag>
+          </Tooltip>
         );
       }
     },
@@ -230,7 +232,7 @@ const TasksPage: React.FC = () => {
       title: 'AI分析',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 90,
       render: status => {
         const { color, text } = statusMap[status];
         return <Tag color={color}>{text}</Tag>;
@@ -240,7 +242,7 @@ const TasksPage: React.FC = () => {
       title: '执行状态',
       dataIndex: 'executionStatus',
       key: 'executionStatus',
-      width: 110,
+      width: 100,
       render: (executionStatus) => {
         const status = executionStatus || 'pending';
         const { color, text, icon } = executionStatusMap[status];
@@ -255,8 +257,8 @@ const TasksPage: React.FC = () => {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 160,
-      render: date => dayjs(date).format('YYYY-MM-DD HH:mm')
+      width: 110,
+      render: date => dayjs(date).format('YYYY-MM-DD')
     },
     {
       title: '操作',
