@@ -1234,7 +1234,7 @@ const MonthlyPlanPage: React.FC = () => {
               </Space>
             </div>
 
-            {selectedItem.description && (
+            {selectedItem.description && selectedItem.sourceType !== 'topic' && (
               <Card size="small" title="描述" style={{ marginBottom: 16 }}>
                 <p>{selectedItem.description}</p>
               </Card>
