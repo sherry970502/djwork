@@ -25,7 +25,9 @@ import {
   Checkbox,
   Radio,
   Dropdown,
-  Typography
+  Typography,
+  Collapse,
+  Avatar
 } from 'antd';
 import {
   PlusOutlined,
@@ -53,14 +55,16 @@ import {
   QuestionCircleOutlined,
   AppstoreOutlined,
   DownOutlined,
-  SearchOutlined
+  SearchOutlined,
+  SafetyOutlined,
+  StarFilled
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as api from '../services/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
-const { Text } = Typography;
+const { Text, Paragraph } = Typography;
 
 // 四大项目分类
 const projectLabels: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -355,6 +359,16 @@ const MonthlyPlanPage: React.FC = () => {
     });
     setMigrateModalVisible(true);
   };
+
+  // 辅助函数：渲染分析段落
+  const renderAnalysisParagraph = (label: string, content: string) => (
+    <div style={{ marginBottom: 16 }}>
+      <Text strong style={{ color: '#667eea', display: 'block', marginBottom: 8 }}>{label}</Text>
+      <Paragraph style={{ margin: 0, color: '#444', lineHeight: 1.8, background: 'rgba(102, 126, 234, 0.03)', padding: 12, borderRadius: 8 }}>
+        {content || <Text type="secondary">暂无数据</Text>}
+      </Paragraph>
+    </div>
+  );
 
   // 按项目分类过滤
   const filteredItems = plan?.items?.filter((item: any) => {
@@ -1226,59 +1240,305 @@ const MonthlyPlanPage: React.FC = () => {
               </Card>
             )}
 
-            {/* 组织事务的 AI 分析建议 */}
+            {/* 组织事务的 AI 完整分析 */}
             {selectedItem.sourceType === 'task' && selectedItem.taskDetail?.analysis && (
-              <Card
-                size="small"
-                title={
-                  <Space>
-                    <ThunderboltOutlined style={{ color: '#722ed1' }} />
-                    组织事务 AI 分析建议
-                  </Space>
-                }
-                style={{ marginBottom: 16 }}
-              >
-                <div style={{ background: '#f6f8fa', padding: 12, borderRadius: 6, marginBottom: 12 }}>
-                  <Text strong style={{ fontSize: 15, color: '#1890ff' }}>
-                    💡 {selectedItem.taskDetail.analysis.recommendation.summary}
-                  </Text>
-                </div>
+              <>
+                {/* 战略建议 - 最重要的放在最前面 */}
+                <Alert
+                  type="success"
+                  style={{ marginBottom: 24, borderRadius: 12 }}
+                  message={
+                    <Space>
+                      <CheckCircleOutlined />
+                      <span style={{ fontWeight: 600, fontSize: 16 }}>战略建议</span>
+                    </Space>
+                  }
+                  description={
+                    <div style={{ marginTop: 12 }}>
+                      <Paragraph style={{ fontSize: 15, fontWeight: 500, color: '#333' }}>
+                        {selectedItem.taskDetail.analysis.recommendation.summary}
+                      </Paragraph>
+                      <Divider style={{ margin: '16px 0' }} />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        <div>
+                          <Text type="secondary">What - 建议做什么</Text>
+                          <Paragraph style={{ margin: '4px 0 0' }}>{selectedItem.taskDetail.analysis.recommendation.whatToDo}</Paragraph>
+                        </div>
+                        <div>
+                          <Text type="secondary">Why - 为什么要做</Text>
+                          <Paragraph style={{ margin: '4px 0 0' }}>{selectedItem.taskDetail.analysis.recommendation.whyToDo}</Paragraph>
+                        </div>
+                        <div>
+                          <Text type="secondary">Where - 核心抓手</Text>
+                          <Paragraph style={{ margin: '4px 0 0' }}>{selectedItem.taskDetail.analysis.recommendation.whereToFocus}</Paragraph>
+                        </div>
+                        <div>
+                          <Text type="secondary">How Much - 代价与回报</Text>
+                          <Paragraph style={{ margin: '4px 0 0' }}>{selectedItem.taskDetail.analysis.recommendation.costAndReturn}</Paragraph>
+                        </div>
+                      </div>
+                      {selectedItem.taskDetail.djRoleReason && (
+                        <div style={{ marginTop: 12, padding: 8, background: '#fff7e6', borderRadius: 4, borderLeft: '3px solid #faad14' }}>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            💼 推荐角色：{selectedItem.taskDetail.djRoleLabel || '未分类'} · {selectedItem.taskDetail.djRoleReason}
+                          </Text>
+                        </div>
+                      )}
+                    </div>
+                  }
+                />
 
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong>What - 做什么：</Text>
-                  <div style={{ marginTop: 4, paddingLeft: 12 }}>
-                    <Text>{selectedItem.taskDetail.analysis.recommendation.whatToDo}</Text>
-                  </div>
-                </div>
+                {/* 六步 KILL 分析 */}
+                <Collapse
+                  defaultActiveKey={['step6']}
+                  style={{ marginBottom: 24 }}
+                  items={[
+                    {
+                      key: 'step1',
+                      label: (
+                        <Space>
+                          <Avatar size="small" style={{ background: '#667eea' }}>1</Avatar>
+                          <BulbOutlined style={{ color: '#667eea' }} />
+                          <span>溯源与证伪 (Why & Falsification)</span>
+                        </Space>
+                      ),
+                      children: (
+                        <div>
+                          {renderAnalysisParagraph('第一性原理', selectedItem.taskDetail.analysis.step1_falsification.firstPrinciple)}
+                          {renderAnalysisParagraph('本分审计', selectedItem.taskDetail.analysis.step1_falsification.coreCapabilityFit)}
+                          <Text strong style={{ color: '#667eea', display: 'block', marginBottom: 8 }}>替代路径</Text>
+                          <List
+                            size="small"
+                            dataSource={selectedItem.taskDetail.analysis.step1_falsification.alternativePaths}
+                            renderItem={(item: string, index: number) => (
+                              <List.Item style={{ background: 'rgba(102, 126, 234, 0.03)', marginBottom: 8, borderRadius: 8, padding: '12px 16px' }}>
+                                <Space align="start">
+                                  <Avatar size="small" style={{ background: '#667eea', minWidth: 24 }}>{index + 1}</Avatar>
+                                  <Text>{item}</Text>
+                                </Space>
+                              </List.Item>
+                            )}
+                          />
+                        </div>
+                      )
+                    },
+                    {
+                      key: 'step2',
+                      label: (
+                        <Space>
+                          <Avatar size="small" style={{ background: '#4facfe' }}>2</Avatar>
+                          <AimOutlined style={{ color: '#4facfe' }} />
+                          <span>环境与竞争审计 (External Dynamics)</span>
+                        </Space>
+                      ),
+                      children: (
+                        <div>
+                          {renderAnalysisParagraph('市场环境适配', selectedItem.taskDetail.analysis.step2_external.marketFit)}
+                          {renderAnalysisParagraph('竞争态势穿透', selectedItem.taskDetail.analysis.step2_external.competitiveAnalysis)}
+                        </div>
+                      )
+                    },
+                    {
+                      key: 'step3',
+                      label: (
+                        <Space>
+                          <Avatar size="small" style={{ background: '#38ef7d' }}>3</Avatar>
+                          <RocketOutlined style={{ color: '#38ef7d' }} />
+                          <span>商业逻辑算法 (Solid Frameworks)</span>
+                        </Space>
+                      ),
+                      children: (
+                        <div>
+                          {renderAnalysisParagraph('波特五力', selectedItem.taskDetail.analysis.step3_frameworks.porterFiveForces)}
+                          {renderAnalysisParagraph('规模化校验', selectedItem.taskDetail.analysis.step3_frameworks.scalabilityTest)}
+                          {renderAnalysisParagraph('安索夫矩阵', selectedItem.taskDetail.analysis.step3_frameworks.ansoffMatrix)}
+                        </div>
+                      )
+                    },
+                    {
+                      key: 'step4',
+                      label: (
+                        <Space>
+                          <Avatar size="small" style={{ background: '#f093fb' }}>4</Avatar>
+                          <ThunderboltOutlined style={{ color: '#f093fb' }} />
+                          <span>执行策略与回报评估 (Execution & ROI)</span>
+                        </Space>
+                      ),
+                      children: (
+                        <div>
+                          {renderAnalysisParagraph('路径优选', selectedItem.taskDetail.analysis.step4_execution.optimalPath)}
+                          {renderAnalysisParagraph('ROI 分析', selectedItem.taskDetail.analysis.step4_execution.roiAnalysis)}
+                          {renderAnalysisParagraph('核心抓手', selectedItem.taskDetail.analysis.step4_execution.leveragePoint)}
+                        </div>
+                      )
+                    },
+                    {
+                      key: 'step5',
+                      label: (
+                        <Space>
+                          <Avatar size="small" style={{ background: '#fa709a' }}>5</Avatar>
+                          <span style={{ color: '#fa709a' }}>❤️</span>
+                          <span>用户与场景锚定 (User Context)</span>
+                        </Space>
+                      ),
+                      children: (
+                        <div>
+                          {renderAnalysisParagraph('快乐逻辑', selectedItem.taskDetail.analysis.step5_userContext.happinessLogic)}
+                          {renderAnalysisParagraph('场景增量价值', selectedItem.taskDetail.analysis.step5_userContext.sceneValue)}
+                        </div>
+                      )
+                    },
+                    {
+                      key: 'step6',
+                      label: (
+                        <Space>
+                          <Avatar size="small" style={{ background: '#f5576c' }}>6</Avatar>
+                          <SafetyOutlined style={{ color: '#f5576c' }} />
+                          <span>风险审计与反直觉挑战</span>
+                        </Space>
+                      ),
+                      children: (
+                        <div>
+                          <Text strong style={{ color: '#667eea', display: 'block', marginBottom: 16 }}>SWOT 分析</Text>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+                            <Card size="small" style={{ background: 'linear-gradient(135deg, rgba(56, 239, 125, 0.1) 0%, rgba(17, 153, 142, 0.1) 100%)' }}>
+                              <Text strong style={{ color: '#11998e' }}>优势 (S)</Text>
+                              <List size="small" dataSource={selectedItem.taskDetail.analysis.step6_risk.swot.strengths} renderItem={(item: string) => <List.Item style={{ border: 'none', padding: '4px 0' }}><Text>{item}</Text></List.Item>} />
+                            </Card>
+                            <Card size="small" style={{ background: 'linear-gradient(135deg, rgba(245, 87, 108, 0.1) 0%, rgba(240, 147, 251, 0.1) 100%)' }}>
+                              <Text strong style={{ color: '#f5576c' }}>劣势 (W)</Text>
+                              <List size="small" dataSource={selectedItem.taskDetail.analysis.step6_risk.swot.weaknesses} renderItem={(item: string) => <List.Item style={{ border: 'none', padding: '4px 0' }}><Text>{item}</Text></List.Item>} />
+                            </Card>
+                            <Card size="small" style={{ background: 'linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%)' }}>
+                              <Text strong style={{ color: '#4facfe' }}>机会 (O)</Text>
+                              <List size="small" dataSource={selectedItem.taskDetail.analysis.step6_risk.swot.opportunities} renderItem={(item: string) => <List.Item style={{ border: 'none', padding: '4px 0' }}><Text>{item}</Text></List.Item>} />
+                            </Card>
+                            <Card size="small" style={{ background: 'linear-gradient(135deg, rgba(254, 225, 64, 0.1) 0%, rgba(250, 112, 154, 0.1) 100%)' }}>
+                              <Text strong style={{ color: '#fa709a' }}>威胁 (T)</Text>
+                              <List size="small" dataSource={selectedItem.taskDetail.analysis.step6_risk.swot.threats} renderItem={(item: string) => <List.Item style={{ border: 'none', padding: '4px 0' }}><Text>{item}</Text></List.Item>} />
+                            </Card>
+                          </div>
 
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong>Why - 为什么做：</Text>
-                  <div style={{ marginTop: 4, paddingLeft: 12 }}>
-                    <Text>{selectedItem.taskDetail.analysis.recommendation.whyToDo}</Text>
-                  </div>
-                </div>
+                          <Alert
+                            type="warning"
+                            style={{ borderRadius: 8 }}
+                            message={<Text strong><ExclamationCircleOutlined /> 直击命门的问题</Text>}
+                            description={
+                              <List
+                                size="small"
+                                dataSource={selectedItem.taskDetail.analysis.step6_risk.criticalQuestions}
+                                renderItem={(item: string, index: number) => (
+                                  <List.Item style={{ border: 'none', padding: '8px 0' }}>
+                                    <Text type="danger" strong>{index + 1}. {item}</Text>
+                                  </List.Item>
+                                )}
+                              />
+                            }
+                          />
+                        </div>
+                      )
+                    }
+                  ]}
+                />
 
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong>Where - 核心抓手：</Text>
-                  <div style={{ marginTop: 4, paddingLeft: 12 }}>
-                    <Text>{selectedItem.taskDetail.analysis.recommendation.whereToFocus}</Text>
-                  </div>
-                </div>
+                {/* 引用来源 */}
+                {selectedItem.taskDetail.analysis.referenceSources && selectedItem.taskDetail.analysis.referenceSources.totalThoughts > 0 && (
+                  <Card
+                    title={
+                      <Space>
+                        <BookOutlined style={{ color: '#667eea' }} />
+                        <span>分析引用来源</span>
+                        <Tag color="blue">{selectedItem.taskDetail.analysis.referenceSources.totalThoughts} 条相关灵感</Tag>
+                      </Space>
+                    }
+                    style={{ marginBottom: 24, borderRadius: 12 }}
+                    size="small"
+                  >
+                    {/* 来源会议 */}
+                    {selectedItem.taskDetail.analysis.referenceSources.meetings && selectedItem.taskDetail.analysis.referenceSources.meetings.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <Text strong style={{ display: 'block', marginBottom: 12, color: '#667eea' }}>
+                          <FileTextOutlined /> 参考的会议纪要
+                        </Text>
+                        {selectedItem.taskDetail.analysis.referenceSources.meetings.map((meeting: any) => (
+                          <Card
+                            key={meeting._id}
+                            size="small"
+                            style={{ marginBottom: 12, background: '#fafafa' }}
+                          >
+                            <div style={{ marginBottom: 8 }}>
+                              <Text strong>{meeting.title}</Text>
+                              <Text type="secondary" style={{ marginLeft: 12 }}>
+                                {dayjs(meeting.meetingDate).format('YYYY-MM-DD')}
+                              </Text>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              {meeting.thoughts.map((thought: any) => (
+                                <Tag
+                                  key={thought._id}
+                                  style={{
+                                    maxWidth: 300,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                  title={thought.content}
+                                >
+                                  {thought.content}
+                                </Tag>
+                              ))}
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
 
-                <div>
-                  <Text strong>How Much - 代价与回报：</Text>
-                  <div style={{ marginTop: 4, paddingLeft: 12 }}>
-                    <Text>{selectedItem.taskDetail.analysis.recommendation.costAndReturn}</Text>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12, padding: 8, background: '#fff7e6', borderRadius: 4, borderLeft: '3px solid #faad14' }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    💼 推荐角色：{selectedItem.taskDetail.djRoleLabel || '未分类'}
-                    {selectedItem.taskDetail.djRoleReason && ` · ${selectedItem.taskDetail.djRoleReason}`}
-                  </Text>
-                </div>
-              </Card>
+                    {/* 引用的灵感详情 */}
+                    {selectedItem.taskDetail.analysis.referenceSources.thoughtDetails && selectedItem.taskDetail.analysis.referenceSources.thoughtDetails.length > 0 && (
+                      <div>
+                        <Text strong style={{ display: 'block', marginBottom: 12, color: '#667eea' }}>
+                          <BulbOutlined /> 引用的灵感知识库内容
+                        </Text>
+                        <List
+                          size="small"
+                          dataSource={selectedItem.taskDetail.analysis.referenceSources.thoughtDetails}
+                          renderItem={(thought: any) => (
+                            <List.Item
+                              style={{
+                                background: thought.isImportant ? 'linear-gradient(135deg, rgba(250, 219, 20, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%)' : '#fafafa',
+                                marginBottom: 8,
+                                borderRadius: 8,
+                                padding: '12px 16px',
+                                border: thought.isImportant ? '1px solid rgba(250, 219, 20, 0.3)' : '1px solid #f0f0f0'
+                              }}
+                            >
+                              <div style={{ width: '100%' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                  {thought.isImportant && (
+                                    <StarFilled style={{ color: '#fadb14' }} />
+                                  )}
+                                  {thought.tags && thought.tags.map((tag: string) => (
+                                    <Tag key={tag} color="blue" style={{ margin: 0 }}>{tag}</Tag>
+                                  ))}
+                                  <Text type="secondary" style={{ marginLeft: 'auto', fontSize: 12 }}>
+                                    {dayjs(thought.createdAt).format('YYYY-MM-DD')}
+                                  </Text>
+                                </div>
+                                <Paragraph
+                                  style={{ margin: 0, color: '#333' }}
+                                  ellipsis={{ rows: 2, expandable: true, symbol: '展开' }}
+                                >
+                                  {thought.content}
+                                </Paragraph>
+                              </div>
+                            </List.Item>
+                          )}
+                        />
+                      </div>
+                    )}
+                  </Card>
+                )}
+              </>
             )}
 
             <Divider>AI 复盘报告</Divider>
