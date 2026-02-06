@@ -1240,6 +1240,84 @@ const MonthlyPlanPage: React.FC = () => {
               </Card>
             )}
 
+            {/* AI 推荐议题的详细信息 */}
+            {selectedItem.sourceType === 'topic' && selectedItem.topicDetail && (
+              <Card
+                size="small"
+                title={
+                  <Space>
+                    <RocketOutlined style={{ color: '#52c41a' }} />
+                    AI 推荐议题详情
+                  </Space>
+                }
+                style={{ marginBottom: 16 }}
+              >
+                <div style={{ marginBottom: 16 }}>
+                  <Space wrap>
+                    <Tag color={
+                      selectedItem.topicDetail.category === 'business' ? 'blue' :
+                      selectedItem.topicDetail.category === 'organization' ? 'green' :
+                      selectedItem.topicDetail.category === 'strategy' ? 'orange' :
+                      selectedItem.topicDetail.category === 'brand' ? 'purple' : 'default'
+                    }>
+                      {
+                        selectedItem.topicDetail.category === 'business' ? '业务/产品类' :
+                        selectedItem.topicDetail.category === 'organization' ? '组织/管理类' :
+                        selectedItem.topicDetail.category === 'strategy' ? '战略/资本类' :
+                        selectedItem.topicDetail.category === 'brand' ? '品牌/生态类' : selectedItem.topicDetail.category
+                      }
+                    </Tag>
+                    <Tag color={
+                      selectedItem.topicDetail.priority === 'high' ? 'red' :
+                      selectedItem.topicDetail.priority === 'medium' ? 'orange' : 'default'
+                    }>
+                      优先级：{
+                        selectedItem.topicDetail.priority === 'high' ? '高' :
+                        selectedItem.topicDetail.priority === 'medium' ? '中' : '低'
+                      }
+                    </Tag>
+                    {selectedItem.topicDetail.status === 'accepted' && <Tag color="green">已采纳</Tag>}
+                    {selectedItem.topicDetail.status === 'dismissed' && <Tag color="default">已忽略</Tag>}
+                  </Space>
+                </div>
+
+                {selectedItem.topicDetail.description && (
+                  <div style={{ marginBottom: 12 }}>
+                    <Text strong style={{ display: 'block', marginBottom: 8, color: '#667eea' }}>
+                      议题描述
+                    </Text>
+                    <Paragraph style={{
+                      margin: 0,
+                      padding: 12,
+                      background: 'rgba(102, 126, 234, 0.03)',
+                      borderRadius: 8,
+                      color: '#444'
+                    }}>
+                      {selectedItem.topicDetail.description}
+                    </Paragraph>
+                  </div>
+                )}
+
+                {selectedItem.topicDetail.reasoning && (
+                  <div style={{ marginBottom: 12 }}>
+                    <Text strong style={{ display: 'block', marginBottom: 8, color: '#667eea' }}>
+                      💡 AI 推荐理由
+                    </Text>
+                    <Paragraph style={{
+                      margin: 0,
+                      padding: 12,
+                      background: 'linear-gradient(135deg, rgba(82, 196, 26, 0.05) 0%, rgba(52, 211, 153, 0.05) 100%)',
+                      borderRadius: 8,
+                      borderLeft: '3px solid #52c41a',
+                      color: '#444'
+                    }}>
+                      {selectedItem.topicDetail.reasoning}
+                    </Paragraph>
+                  </div>
+                )}
+              </Card>
+            )}
+
             {/* 组织事务的 AI 完整分析 */}
             {selectedItem.sourceType === 'task' && selectedItem.taskDetail?.analysis && (
               <>
