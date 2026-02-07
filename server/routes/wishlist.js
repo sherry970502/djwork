@@ -17,6 +17,9 @@ router.post('/summarize', wishlistController.summarize);
 // POST /api/wishlist/recommend - AI 推荐
 router.post('/recommend', wishlistController.recommend);
 
+// POST /api/wishlist/reorder - 批量更新顺序
+router.post('/reorder', wishlistController.reorderItems);
+
 // PUT /api/wishlist/:id - 更新 wishlist 项
 router.put('/:id', wishlistController.updateItem);
 

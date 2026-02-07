@@ -482,4 +482,8 @@ export const divergeWishlistItem = (id: string) =>
 export const recommendWishlist = () =>
   api.post<ApiResponse<{ recommendations: Array<{ content: string; reason: string }> }>>('/wishlist/recommend').then(res => res.data);
 
+// 批量更新顺序
+export const reorderWishlist = (items: Array<{ _id: string; order: number }>) =>
+  api.post<ApiResponse<any>>('/wishlist/reorder', { items }).then(res => res.data);
+
 export default api;

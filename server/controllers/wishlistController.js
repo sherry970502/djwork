@@ -168,18 +168,25 @@ exports.moveItem = async (req, res) => {
 // AI 自动分类
 exports.autoClassify = async (req, res) => {
   try {
-    const items = await Wishlist.find();
+    // 只获取没有分类的项目
+    const unclassifiedItems = await Wishlist.find({
+      $or: [
+        { category: { $exists: false } },
+        { category: null },
+        { category: '' }
+      ]
+    });
 
-    if (items.length === 0) {
+    if (unclassifiedItems.length === 0) {
       return res.json({
         success: true,
-        message: 'No items to classify'
+        message: '所有项目都已有分类，无需分类'
       });
     }
 
     const client = new Anthropic({ apiKey: config.claudeApiKey });
 
-    const itemsText = items.map((item, index) => `${index + 1}. ${item.content}`).join('\n');
+    const itemsText = unclassifiedItems.map((item, index) => `${index + 1}. ${item.content}`).join('\n');
 
     const prompt = `请帮我将以下人生愿望清单进行分类。
 
@@ -213,18 +220,20 @@ ${itemsText}
     const jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const classifications = JSON.parse(jsonText);
 
-    // 更新分类
+    // 更新分类 - 只更新未分类的项目
+    let classifiedCount = 0;
     for (const classification of classifications) {
-      const item = items[classification.index - 1];
+      const item = unclassifiedItems[classification.index - 1];
       if (item) {
         item.category = classification.category;
         await item.save();
+        classifiedCount++;
       }
     }
 
     res.json({
       success: true,
-      message: 'Classification completed'
+      message: `已为 ${classifiedCount} 个项目添加分类`
     });
   } catch (error) {
     console.error('Auto classify error:', error);
@@ -398,6 +407,38 @@ ${itemsText}
     });
   } catch (error) {
     console.error('Recommend error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// 批量更新顺序
+exports.reorderItems = async (req, res) => {
+  try {
+    const { items } = req.body; // items: [{ _id, order }, ...]
+
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid items data'
+      });
+    }
+
+    // 批量更新
+    const updatePromises = items.map(({ _id, order }) =>
+      Wishlist.findByIdAndUpdate(_id, { order, updatedAt: new Date() })
+    );
+
+    await Promise.all(updatePromises);
+
+    res.json({
+      success: true,
+      message: 'Order updated successfully'
+    });
+  } catch (error) {
+    console.error('Reorder items error:', error);
     res.status(500).json({
       success: false,
       message: error.message

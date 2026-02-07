@@ -24,10 +24,26 @@ import {
   ThunderboltOutlined,
   RobotOutlined,
   StarOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  HolderOutlined
 } from '@ant-design/icons';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import * as api from '../services/api';
 
 const { Title, Text, Paragraph } = Typography;
@@ -46,6 +62,107 @@ interface AISuggestion {
   reason: string;
 }
 
+// 可拖拽的列表项组件
+const SortableItem: React.FC<{
+  item: WishlistItem;
+  onEdit: (item: WishlistItem) => void;
+  onDelete: (id: string) => void;
+  onDiverge: (item: WishlistItem) => void;
+}> = ({ item, onEdit, onDelete, onDiverge }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      '个人成长': 'blue',
+      '健康生活': 'green',
+      '旅行探索': 'orange',
+      '创意项目': 'purple',
+      '人际关系': 'pink',
+      '学习发展': 'cyan',
+    };
+    return colors[category] || 'default';
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={{ ...style, marginBottom: 16, cursor: isDragging ? 'grabbing' : 'grab' }}
+      size="small"
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', flex: 1 }}>
+          <div
+            {...attributes}
+            {...listeners}
+            style={{
+              cursor: isDragging ? 'grabbing' : 'grab',
+              marginRight: 12,
+              marginTop: 4,
+              color: '#8c8c8c'
+            }}
+          >
+            <HolderOutlined />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Space>
+              <Text strong style={{ fontSize: 16 }}>
+                {item.content}
+              </Text>
+              {item.category && (
+                <Tag color={getCategoryColor(item.category)}>
+                  {item.category}
+                </Tag>
+              )}
+            </Space>
+          </div>
+        </div>
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<ThunderboltOutlined />}
+            onClick={() => onDiverge(item)}
+          >
+            AI 发散
+          </Button>
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => onEdit(item)}
+          />
+          <Popconfirm
+            title="确定删除这条 Wish 吗？"
+            onConfirm={() => onDelete(item._id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+            />
+          </Popconfirm>
+        </Space>
+      </div>
+    </Card>
+  );
+};
+
 const WishlistPage: React.FC = () => {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,6 +177,14 @@ const WishlistPage: React.FC = () => {
   const [selectedItemForDiverge, setSelectedItemForDiverge] = useState<WishlistItem | null>(null);
   const [recommendLoading, setRecommendLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<AISuggestion[]>([]);
+
+  // 拖拽传感器配置
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     fetchItems();
@@ -102,7 +227,6 @@ const WishlistPage: React.FC = () => {
       }
 
       setModalVisible(false);
-      form.resetFields();
       fetchItems();
     } catch (error) {
       message.error('操作失败');
@@ -119,25 +243,13 @@ const WishlistPage: React.FC = () => {
     }
   };
 
-  const handleMove = async (id: string, direction: 'up' | 'down') => {
-    try {
-      await api.moveWishlistItem(id, direction);
-      fetchItems();
-    } catch (error) {
-      message.error('移动失败');
-    }
-  };
-
   const handleAutoClassify = async () => {
     try {
-      setLoading(true);
-      await api.autoClassifyWishlist();
-      message.success('AI 分类完成');
+      const res = await api.autoClassifyWishlist();
+      message.success(res.message || '分类完成');
       fetchItems();
     } catch (error) {
-      message.error('AI 分类失败');
-    } finally {
-      setLoading(false);
+      message.error('分类失败');
     }
   };
 
@@ -180,23 +292,51 @@ const WishlistPage: React.FC = () => {
       await api.createWishlistItem({ content });
       message.success('已添加到 Wishlist');
       fetchItems();
-      setDivergeSuggestions([]);
-      setRecommendations([]);
     } catch (error) {
       message.error('添加失败');
     }
   };
 
-  const getCategoryColor = (category?: string) => {
+  // 拖拽结束处理
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex((item) => item._id === active.id);
+      const newIndex = items.findIndex((item) => item._id === over.id);
+
+      const newItems = arrayMove(items, oldIndex, newIndex);
+
+      // 更新本地状态
+      setItems(newItems);
+
+      // 更新 order 字段并同步到服务器
+      const updatedItems = newItems.map((item, index) => ({
+        _id: item._id,
+        order: index,
+      }));
+
+      try {
+        await api.reorderWishlist(updatedItems);
+        message.success('顺序已更新');
+      } catch (error) {
+        message.error('更新顺序失败');
+        // 如果失败，重新获取数据恢复原状态
+        fetchItems();
+      }
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
       '个人成长': 'blue',
       '健康生活': 'green',
       '旅行探索': 'orange',
       '创意项目': 'purple',
       '人际关系': 'pink',
-      '学习发展': 'cyan'
+      '学习发展': 'cyan',
     };
-    return colors[category || ''] || 'default';
+    return colors[category] || 'default';
   };
 
   return (
@@ -208,7 +348,7 @@ const WishlistPage: React.FC = () => {
             DJ Wishlist
           </Title>
           <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-            记录和管理你的人生愿望清单，让 AI 帮你探索更多可能
+            记录和管理你的人生愿望清单，让 AI 帮你探索更多可能。拖动 <HolderOutlined /> 图标可调整顺序
           </Paragraph>
         </div>
         <Space>
@@ -306,92 +446,59 @@ const WishlistPage: React.FC = () => {
           </Button>
         </Empty>
       ) : (
-        <List
-          dataSource={items}
-          renderItem={(item, index) => (
-            <Card
-              key={item._id}
-              style={{ marginBottom: 16 }}
-              size="small"
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1 }}>
-                  <Space>
-                    <Text strong style={{ fontSize: 16 }}>
-                      {item.content}
-                    </Text>
-                    {item.category && (
-                      <Tag color={getCategoryColor(item.category)}>
-                        {item.category}
-                      </Tag>
-                    )}
-                  </Space>
-                </div>
-                <Space>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<ThunderboltOutlined />}
-                    onClick={() => handleDiverge(item)}
-                  >
-                    AI 发散
-                  </Button>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<ArrowUpOutlined />}
-                    disabled={index === 0}
-                    onClick={() => handleMove(item._id, 'up')}
-                  />
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<ArrowDownOutlined />}
-                    disabled={index === items.length - 1}
-                    onClick={() => handleMove(item._id, 'down')}
-                  />
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => handleEdit(item)}
-                  />
-                  <Popconfirm
-                    title="确认删除？"
-                    onConfirm={() => handleDelete(item._id)}
-                  >
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                    />
-                  </Popconfirm>
-                </Space>
-              </div>
-            </Card>
-          )}
-        />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={items.map(item => item._id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {items.map((item) => (
+              <SortableItem
+                key={item._id}
+                item={item}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onDiverge={handleDiverge}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
       )}
 
-      {/* 发散建议 Modal */}
+      {/* 添加/编辑 Modal */}
       <Modal
-        title={
-          <Space>
-            <ThunderboltOutlined style={{ color: '#667eea' }} />
-            AI 发散建议
-          </Space>
-        }
+        title={editingItem ? '编辑 Wish' : '添加 Wish'}
+        open={modalVisible}
+        onOk={handleSubmit}
+        onCancel={() => setModalVisible(false)}
+        okText="保存"
+        cancelText="取消"
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="content"
+            label="内容"
+            rules={[{ required: true, message: '请输入内容' }]}
+          >
+            <TextArea rows={4} placeholder="输入你的愿望..." />
+          </Form.Item>
+          <Form.Item name="category" label="分类">
+            <Input placeholder="可选，如：旅行、学习、健康等" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* AI 发散建议 Modal */}
+      <Modal
+        title={`💡 AI 发散建议：${selectedItemForDiverge?.content.substring(0, 30)}...`}
         open={divergeSuggestions.length > 0}
         onCancel={() => setDivergeSuggestions([])}
         footer={null}
         width={700}
       >
-        <Alert
-          type="info"
-          message={`基于"${selectedItemForDiverge?.content}"的发散建议`}
-          style={{ marginBottom: 16 }}
-        />
         <List
           dataSource={divergeSuggestions}
           renderItem={(item) => (
@@ -402,7 +509,10 @@ const WishlistPage: React.FC = () => {
                   type="primary"
                   size="small"
                   icon={<CheckCircleOutlined />}
-                  onClick={() => handleAddSuggestion(item.content)}
+                  onClick={() => {
+                    handleAddSuggestion(item.content);
+                    setDivergeSuggestions([]);
+                  }}
                 >
                   加入 Wishlist
                 </Button>
@@ -415,38 +525,6 @@ const WishlistPage: React.FC = () => {
             </List.Item>
           )}
         />
-      </Modal>
-
-      {/* 添加/编辑 Modal */}
-      <Modal
-        title={editingItem ? '编辑 Wish' : '添加 Wish'}
-        open={modalVisible}
-        onCancel={() => {
-          setModalVisible(false);
-          form.resetFields();
-        }}
-        onOk={handleSubmit}
-        okText="确定"
-        cancelText="取消"
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="content"
-            label="愿望内容"
-            rules={[{ required: true, message: '请输入愿望内容' }]}
-          >
-            <TextArea
-              rows={3}
-              placeholder="例如：学会弹吉他、去冰岛看极光、完成一次马拉松..."
-            />
-          </Form.Item>
-          <Form.Item
-            name="category"
-            label="分类（可选）"
-          >
-            <Input placeholder="AI 会自动帮你分类，也可以手动输入" />
-          </Form.Item>
-        </Form>
       </Modal>
     </div>
   );
