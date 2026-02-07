@@ -17,7 +17,8 @@ import {
   Tabs,
   Select,
   Radio,
-  Badge
+  Badge,
+  Tooltip
 } from 'antd';
 import {
   PlusOutlined,
@@ -154,14 +155,14 @@ const SortableItem: React.FC<{
         <Space>
           {/* 状态快捷操作 */}
           {!item.status && (
-            <Button
-              type="primary"
-              size="small"
-              icon={<StarOutlined />}
-              onClick={() => onStatusChange(item._id, '近期目标')}
-            >
-              加入近期目标
-            </Button>
+            <Tooltip title="加入近期目标">
+              <Button
+                type="text"
+                size="small"
+                icon={<StarOutlined style={{ color: '#ff9800' }} />}
+                onClick={() => onStatusChange(item._id, '近期目标')}
+              />
+            </Tooltip>
           )}
           {item.status === '近期目标' && (
             <>
