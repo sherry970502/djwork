@@ -12,10 +12,8 @@ import {
   Popconfirm,
   Empty,
   Typography,
-  Divider,
   Spin,
-  Alert,
-  Collapse
+  Alert
 } from 'antd';
 import {
   PlusOutlined,
@@ -58,7 +56,6 @@ const WishlistPage: React.FC = () => {
   // AI 功能状态
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summary, setSummary] = useState('');
-  const [divergeLoading, setDivergeLoading] = useState(false);
   const [divergeSuggestions, setDivergeSuggestions] = useState<AISuggestion[]>([]);
   const [selectedItemForDiverge, setSelectedItemForDiverge] = useState<WishlistItem | null>(null);
   const [recommendLoading, setRecommendLoading] = useState(false);
