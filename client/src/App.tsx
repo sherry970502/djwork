@@ -12,7 +12,9 @@ import {
   RocketOutlined,
   ExperimentOutlined,
   CalendarOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  HeartOutlined,
+  ToolOutlined
 } from '@ant-design/icons';
 import HomePage from './pages/HomePage';
 import MonthlyPlanPage from './pages/MonthlyPlanPage';
@@ -26,6 +28,7 @@ import KnowledgePage from './pages/KnowledgePage';
 import InsightsPage from './pages/InsightsPage';
 import PersonalDesignsPage from './pages/PersonalDesignsPage';
 import CreativeMindMapPage from './pages/CreativeMindMapPage';
+import LifeToolsPage from './pages/LifeToolsPage';
 import LoginPage from './pages/LoginPage';
 
 const { Header, Content, Sider } = Layout;
@@ -138,6 +141,18 @@ const App: React.FC = () => {
           label: <Link to="/designs/mindmap">创意发散</Link>
         }
       ]
+    },
+    {
+      key: 'life-group',
+      icon: <HeartOutlined />,
+      label: 'DJ 人生管理',
+      children: [
+        {
+          key: '/life/tools',
+          icon: <ToolOutlined />,
+          label: <Link to="/life/tools">外部工具</Link>
+        }
+      ]
     }
   ];
 
@@ -153,6 +168,7 @@ const App: React.FC = () => {
     if (path.startsWith('/insights')) return '/insights';
     if (path === '/designs/mindmap') return '/designs/mindmap';
     if (path.startsWith('/designs')) return '/designs';
+    if (path.startsWith('/life/tools')) return '/life/tools';
     return '/';
   };
 
@@ -166,6 +182,9 @@ const App: React.FC = () => {
     }
     if (path.startsWith('/designs')) {
       return ['design-group'];
+    }
+    if (path.startsWith('/life')) {
+      return ['life-group'];
     }
     return [];
   };
@@ -234,6 +253,7 @@ const App: React.FC = () => {
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/designs" element={<PersonalDesignsPage />} />
               <Route path="/designs/mindmap" element={<CreativeMindMapPage />} />
+              <Route path="/life/tools" element={<LifeToolsPage />} />
             </Routes>
           </Content>
         </Layout>
