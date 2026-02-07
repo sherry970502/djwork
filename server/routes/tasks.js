@@ -11,6 +11,9 @@ router.get('/stats', taskController.getTaskStats);
 // GET /api/tasks/:id - Get task by ID
 router.get('/:id', taskController.getTask);
 
+// POST /api/tasks/pre-check - AI pre-check before creating task
+router.post('/pre-check', taskController.preCheckTask);
+
 // POST /api/tasks - Create new task
 router.post('/', taskController.createTask);
 

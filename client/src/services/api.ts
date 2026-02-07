@@ -185,6 +185,18 @@ export const getTasks = (params?: {
 export const getTask = (id: string) =>
   api.get<ApiResponse<OrganizationTask>>(`/tasks/${id}`).then(res => res.data);
 
+export const preCheckTask = (data: {
+  title: string;
+  description: string;
+}) =>
+  api.post<ApiResponse<{
+    shouldDJHandle: '必须' | '建议' | '可选' | '不建议';
+    confidence: number;
+    reasoning: string;
+    suggestedOwner?: string;
+    criticalFactors: string[];
+  }>>('/tasks/pre-check', data).then(res => res.data);
+
 export const createTask = (data: {
   title: string;
   description: string;

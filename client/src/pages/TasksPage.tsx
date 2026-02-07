@@ -42,6 +42,7 @@ import {
   getTasks,
   getTask,
   createTask,
+  preCheckTask,
   analyzeTask,
   deleteTask
 } from '../services/api';
@@ -102,6 +103,10 @@ const TasksPage: React.FC = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<OrganizationTask | null>(null);
   const [form] = Form.useForm();
+  const [preCheckModalOpen, setPreCheckModalOpen] = useState(false);
+  const [preCheckResult, setPreCheckResult] = useState<any>(null);
+  const [preCheckLoading, setPreCheckLoading] = useState(false);
+  const [pendingTaskData, setPendingTaskData] = useState<any>(null);
 
   const fetchTasks = useCallback(async (page = 1) => {
     setLoading(true);
@@ -135,17 +140,49 @@ const TasksPage: React.FC = () => {
   const handleCreate = async () => {
     try {
       const values = await form.validateFields();
-      await createTask({
+
+      // 先进行 AI 前置判断
+      setPreCheckLoading(true);
+      const preCheck = await preCheckTask({
+        title: values.title,
+        description: values.description
+      });
+
+      setPreCheckResult(preCheck.data);
+      setPendingTaskData({
         ...values,
         dueDate: values.dueDate?.toISOString()
       });
-      message.success('任务创建成功');
+      setPreCheckLoading(false);
+
+      // 显示前置判断结果
       setCreateModalOpen(false);
+      setPreCheckModalOpen(true);
+    } catch (error) {
+      setPreCheckLoading(false);
+      message.error('前置判断失败');
+    }
+  };
+
+  const handleConfirmCreate = async () => {
+    try {
+      await createTask(pendingTaskData);
+      message.success('任务创建成功');
+      setPreCheckModalOpen(false);
+      setPreCheckResult(null);
+      setPendingTaskData(null);
       form.resetFields();
       fetchTasks(1);
     } catch {
       message.error('创建失败');
     }
+  };
+
+  const handleCancelCreate = () => {
+    setPreCheckModalOpen(false);
+    setPreCheckResult(null);
+    setPendingTaskData(null);
+    setCreateModalOpen(true); // 回到创建表单
   };
 
   const handleAnalyze = async (id: string) => {
@@ -373,8 +410,9 @@ const TasksPage: React.FC = () => {
           form.resetFields();
         }}
         onOk={handleCreate}
-        okText="创建"
+        okText="下一步：AI 前置判断"
         cancelText="取消"
+        confirmLoading={preCheckLoading}
         width={600}
       >
         <Form form={form} layout="vertical">
@@ -411,6 +449,97 @@ const TasksPage: React.FC = () => {
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Pre-Check Result Modal */}
+      <Modal
+        title={
+          <Space>
+            <BulbOutlined style={{ color: '#667eea' }} />
+            AI 事务前置判断
+          </Space>
+        }
+        open={preCheckModalOpen}
+        onCancel={handleCancelCreate}
+        footer={[
+          <Button key="back" onClick={handleCancelCreate}>
+            返回修改
+          </Button>,
+          <Button
+            key="submit"
+            type={preCheckResult?.shouldDJHandle === '必须' || preCheckResult?.shouldDJHandle === '建议' ? 'primary' : 'default'}
+            onClick={handleConfirmCreate}
+          >
+            {preCheckResult?.shouldDJHandle === '不建议' ? '仍然创建' : '确认创建'}
+          </Button>
+        ]}
+        width={700}
+      >
+        {preCheckResult && (
+          <div>
+            <Alert
+              type={
+                preCheckResult.shouldDJHandle === '必须' ? 'success' :
+                preCheckResult.shouldDJHandle === '建议' ? 'info' :
+                preCheckResult.shouldDJHandle === '可选' ? 'warning' : 'error'
+              }
+              message={
+                <div style={{ fontSize: 16, fontWeight: 600 }}>
+                  {preCheckResult.shouldDJHandle === '必须' && '✅ 必须由 DJ 处理'}
+                  {preCheckResult.shouldDJHandle === '建议' && '👍 建议由 DJ 处理'}
+                  {preCheckResult.shouldDJHandle === '可选' && '🤔 可选 - DJ 可参与指导'}
+                  {preCheckResult.shouldDJHandle === '不建议' && '⚠️ 不建议由 DJ 处理'}
+                </div>
+              }
+              description={
+                <div style={{ marginTop: 8, fontSize: 14 }}>
+                  置信度：{(preCheckResult.confidence * 100).toFixed(0)}%
+                </div>
+              }
+              style={{ marginBottom: 24 }}
+            />
+
+            <Card size="small" title="AI 判断理由" style={{ marginBottom: 16 }}>
+              <Paragraph style={{ margin: 0, lineHeight: 1.8 }}>
+                {preCheckResult.reasoning}
+              </Paragraph>
+            </Card>
+
+            {preCheckResult.criticalFactors && preCheckResult.criticalFactors.length > 0 && (
+              <Card size="small" title="关键判断因素" style={{ marginBottom: 16 }}>
+                <List
+                  size="small"
+                  dataSource={preCheckResult.criticalFactors}
+                  renderItem={(item: string, index: number) => (
+                    <List.Item style={{ border: 'none', padding: '8px 0' }}>
+                      <Space align="start">
+                        <Avatar size="small" style={{ background: '#667eea', minWidth: 24 }}>{index + 1}</Avatar>
+                        <Text>{item}</Text>
+                      </Space>
+                    </List.Item>
+                  )}
+                />
+              </Card>
+            )}
+
+            {preCheckResult.suggestedOwner && preCheckResult.shouldDJHandle === '不建议' && (
+              <Card size="small" title="建议执行人" style={{ marginBottom: 16 }}>
+                <Tag color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>
+                  {preCheckResult.suggestedOwner}
+                </Tag>
+              </Card>
+            )}
+
+            {preCheckResult.shouldDJHandle === '不建议' && (
+              <Alert
+                type="warning"
+                message="提示"
+                description="此事务可能不需要董事长亲自处理。如果您仍然认为需要创建到组织事务池，请点击「仍然创建」。"
+                showIcon
+              />
+            )}
+          </div>
+        )}
       </Modal>
 
       {/* Detail Modal */}

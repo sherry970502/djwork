@@ -161,6 +161,91 @@ exports.getTask = async (req, res) => {
 };
 
 // Create task
+// AI 事务前置判断 - 判断是否应该由 DJ 完成
+exports.preCheckTask = async (req, res) => {
+  try {
+    const { title, description } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and description are required'
+      });
+    }
+
+    const client = new Anthropic({ apiKey: config.claudeApiKey });
+
+    const prompt = `你是一个组织事务前置判断助手。你需要判断一个事务是否应该由 DJ（公司董事长 + 顶层设计师）来完成。
+
+## DJ 的角色定位
+DJ 是公司董事长，同时也是一位顶尖的设计师。他应该专注于：
+1. **顶层战略决策** - 需要董事长权限和全局视野的决策
+2. **资源调动** - 需要协调多方资源、跨部门合作的事务
+3. **核心设计创新** - 需要顶级设计能力、开创性思考的项目
+4. **关键节点把关** - 重要项目的设计验收和质量把关
+5. **方法论传授** - 团队遇到重大设计思考瓶颈时的指导
+
+## 不应该由 DJ 完成的事务
+1. 执行层面的具体工作（可以由团队成员完成）
+2. 常规的业务操作和流程性事务
+3. 技术实现细节（除非涉及架构级别决策）
+4. 日常的客户沟通和支持
+5. 可以授权给下属独立完成的事务
+
+## 待判断的事务
+标题：${title}
+描述：${description}
+
+## 请按以下格式返回 JSON：
+{
+  "shouldDJHandle": "必须" | "建议" | "可选" | "不建议",
+  "confidence": 0.0-1.0,
+  "reasoning": "详细说明为什么这个事务应该/不应该由 DJ 完成",
+  "suggestedOwner": "如果不建议 DJ 完成，建议谁来完成（例如：产品经理、设计团队、技术团队、运营团队等）",
+  "criticalFactors": ["列出1-3个关键判断因素"]
+}
+
+判断标准：
+- "必须"：只有 DJ 能完成，涉及顶层战略、重大资源调动、核心创新设计
+- "建议"：DJ 来做会更好，但理论上也可以授权给其他人
+- "可选"：DJ 可以参与但不是必须的，主要是提供指导或把关
+- "不建议"：明显不需要 DJ 亲自处理，应该由团队成员完成
+
+请直接返回 JSON，不要包含任何其他文字。`;
+
+    const message = await client.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 2000,
+      temperature: 0.3,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const responseText = message.content[0].text.trim();
+
+    // 尝试提取 JSON
+    let result;
+    try {
+      // 移除可能的 markdown 代码块标记
+      const jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      result = JSON.parse(jsonText);
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', responseText);
+      throw new Error('AI 返回格式错误');
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Pre-check task error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || '事务前置判断失败'
+    });
+  }
+};
+
 exports.createTask = async (req, res) => {
   try {
     const { title, description, source, priority, dueDate } = req.body;
