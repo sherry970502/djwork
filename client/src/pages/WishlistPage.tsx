@@ -30,7 +30,8 @@ import {
   RobotOutlined,
   StarOutlined,
   CheckCircleOutlined,
-  HolderOutlined
+  HolderOutlined,
+  CloseCircleOutlined
 } from '@ant-design/icons';
 import {
   DndContext,
@@ -166,30 +167,33 @@ const SortableItem: React.FC<{
           )}
           {item.status === '近期目标' && (
             <>
-              <Button
-                type="primary"
-                size="small"
-                ghost
-                icon={<CheckCircleOutlined />}
-                onClick={() => onStatusChange(item._id, '已实现')}
-              >
-                标记已实现
-              </Button>
-              <Button
-                size="small"
-                onClick={() => onStatusChange(item._id, null)}
-              >
-                移出近期目标
-              </Button>
+              <Tooltip title="标记已实现">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+                  onClick={() => onStatusChange(item._id, '已实现')}
+                />
+              </Tooltip>
+              <Tooltip title="移出近期目标">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CloseCircleOutlined style={{ color: '#8c8c8c' }} />}
+                  onClick={() => onStatusChange(item._id, null)}
+                />
+              </Tooltip>
             </>
           )}
           {item.status === '已实现' && (
-            <Button
-              size="small"
-              onClick={() => onStatusChange(item._id, null)}
-            >
-              取消已实现
-            </Button>
+            <Tooltip title="取消已实现">
+              <Button
+                type="text"
+                size="small"
+                icon={<CloseCircleOutlined style={{ color: '#8c8c8c' }} />}
+                onClick={() => onStatusChange(item._id, null)}
+              />
+            </Tooltip>
           )}
 
           <Button
@@ -473,23 +477,22 @@ const WishlistPage: React.FC = () => {
             renderItem={(item) => (
               <List.Item
                 actions={[
-                  <Button
-                    key="done"
-                    type="primary"
-                    size="small"
-                    ghost
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => handleStatusChange(item._id, '已实现')}
-                  >
-                    标记已实现
-                  </Button>,
-                  <Button
-                    key="remove"
-                    size="small"
-                    onClick={() => handleStatusChange(item._id, null)}
-                  >
-                    移出
-                  </Button>
+                  <Tooltip key="done" title="标记已实现">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+                      onClick={() => handleStatusChange(item._id, '已实现')}
+                    />
+                  </Tooltip>,
+                  <Tooltip key="remove" title="移出">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<CloseCircleOutlined style={{ color: '#8c8c8c' }} />}
+                      onClick={() => handleStatusChange(item._id, null)}
+                    />
+                  </Tooltip>
                 ]}
               >
                 <List.Item.Meta
