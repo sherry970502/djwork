@@ -217,7 +217,7 @@ DJ 是公司董事长，同时也是一位顶尖的设计师。他应该专注�
 
     console.log('Calling Claude API for pre-check...');
     const message = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-haiku-20240307',
       max_tokens: 2000,
       temperature: 0.3,
       messages: [{ role: 'user', content: prompt }]
