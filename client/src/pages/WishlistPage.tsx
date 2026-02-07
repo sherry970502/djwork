@@ -156,13 +156,10 @@ const WishlistPage: React.FC = () => {
   const handleDiverge = async (item: WishlistItem) => {
     try {
       setSelectedItemForDiverge(item);
-      setDivergeLoading(true);
       const res = await api.divergeWishlistItem(item._id);
       setDivergeSuggestions(res.data.suggestions);
     } catch (error) {
       message.error('生成建议失败');
-    } finally {
-      setDivergeLoading(false);
     }
   };
 
