@@ -8,11 +8,11 @@ router.get('/', taskController.getTasks);
 // GET /api/tasks/stats - Get task statistics
 router.get('/stats', taskController.getTaskStats);
 
+// POST /api/tasks/pre-check - AI pre-check before creating task (must be before /:id)
+router.post('/pre-check', taskController.preCheckTask);
+
 // GET /api/tasks/:id - Get task by ID
 router.get('/:id', taskController.getTask);
-
-// POST /api/tasks/pre-check - AI pre-check before creating task
-router.post('/pre-check', taskController.preCheckTask);
 
 // POST /api/tasks - Create new task
 router.post('/', taskController.createTask);

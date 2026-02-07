@@ -164,6 +164,7 @@ exports.getTask = async (req, res) => {
 // AI 事务前置判断 - 判断是否应该由 DJ 完成
 exports.preCheckTask = async (req, res) => {
   try {
+    console.log('Pre-check task request:', req.body);
     const { title, description } = req.body;
 
     if (!title || !description) {
@@ -173,6 +174,7 @@ exports.preCheckTask = async (req, res) => {
       });
     }
 
+    console.log('Initializing Anthropic client...');
     const client = new Anthropic({ apiKey: config.claudeApiKey });
 
     const prompt = `你是一个组织事务前置判断助手。你需要判断一个事务是否应该由 DJ（公司董事长 + 顶层设计师）来完成。
@@ -213,6 +215,7 @@ DJ 是公司董事长，同时也是一位顶尖的设计师。他应该专注�
 
 请直接返回 JSON，不要包含任何其他文字。`;
 
+    console.log('Calling Claude API for pre-check...');
     const message = await client.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 2000,
@@ -220,7 +223,9 @@ DJ 是公司董事长，同时也是一位顶尖的设计师。他应该专注�
       messages: [{ role: 'user', content: prompt }]
     });
 
+    console.log('Received AI response');
     const responseText = message.content[0].text.trim();
+    console.log('AI response text:', responseText.substring(0, 200) + '...');
 
     // 尝试提取 JSON
     let result;
@@ -228,6 +233,7 @@ DJ 是公司董事长，同时也是一位顶尖的设计师。他应该专注�
       // 移除可能的 markdown 代码块标记
       const jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       result = JSON.parse(jsonText);
+      console.log('Parsed result:', result);
     } catch (parseError) {
       console.error('Failed to parse AI response:', responseText);
       throw new Error('AI 返回格式错误');
@@ -239,6 +245,7 @@ DJ 是公司董事长，同时也是一位顶尖的设计师。他应该专注�
     });
   } catch (error) {
     console.error('Pre-check task error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: error.message || '事务前置判断失败'

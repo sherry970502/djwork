@@ -158,9 +158,11 @@ const TasksPage: React.FC = () => {
       // 显示前置判断结果
       setCreateModalOpen(false);
       setPreCheckModalOpen(true);
-    } catch (error) {
+    } catch (error: any) {
       setPreCheckLoading(false);
-      message.error('前置判断失败');
+      console.error('Pre-check error:', error);
+      const errorMsg = error?.response?.data?.message || error?.message || '前置判断失败';
+      message.error(`前置判断失败: ${errorMsg}`);
     }
   };
 
