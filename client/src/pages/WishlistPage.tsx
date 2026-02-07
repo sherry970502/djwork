@@ -83,7 +83,8 @@ const SortableItem: React.FC<{
   onEdit: (item: WishlistItem) => void;
   onDelete: (id: string) => void;
   onDiverge: (item: WishlistItem) => void;
-}> = ({ item, onEdit, onDelete, onDiverge }) => {
+  onStatusChange: (id: string, status: '近期目标' | '已实现' | null) => void;
+}> = ({ item, onEdit, onDelete, onDiverge, onStatusChange }) => {
   const {
     attributes,
     listeners,
@@ -151,6 +152,45 @@ const SortableItem: React.FC<{
           </div>
         </div>
         <Space>
+          {/* 状态快捷操作 */}
+          {!item.status && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<StarOutlined />}
+              onClick={() => onStatusChange(item._id, '近期目标')}
+            >
+              加入近期目标
+            </Button>
+          )}
+          {item.status === '近期目标' && (
+            <>
+              <Button
+                type="primary"
+                size="small"
+                ghost
+                icon={<CheckCircleOutlined />}
+                onClick={() => onStatusChange(item._id, '已实现')}
+              >
+                标记已实现
+              </Button>
+              <Button
+                size="small"
+                onClick={() => onStatusChange(item._id, null)}
+              >
+                移出近期目标
+              </Button>
+            </>
+          )}
+          {item.status === '已实现' && (
+            <Button
+              size="small"
+              onClick={() => onStatusChange(item._id, null)}
+            >
+              取消已实现
+            </Button>
+          )}
+
           <Button
             type="text"
             size="small"
@@ -278,6 +318,16 @@ const WishlistPage: React.FC = () => {
       fetchItems();
     } catch (error) {
       message.error('操作失败');
+    }
+  };
+
+  const handleStatusChange = async (id: string, status: '近期目标' | '已实现' | null) => {
+    try {
+      await api.updateWishlistItem(id, { status });
+      message.success('状态已更新');
+      fetchItems();
+    } catch (error) {
+      message.error('更新失败');
     }
   };
 
@@ -423,12 +473,21 @@ const WishlistPage: React.FC = () => {
               <List.Item
                 actions={[
                   <Button
-                    key="edit"
-                    type="link"
+                    key="done"
+                    type="primary"
                     size="small"
-                    onClick={() => handleEdit(item)}
+                    ghost
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => handleStatusChange(item._id, '已实现')}
                   >
-                    编辑
+                    标记已实现
+                  </Button>,
+                  <Button
+                    key="remove"
+                    size="small"
+                    onClick={() => handleStatusChange(item._id, null)}
+                  >
+                    移出
                   </Button>
                 ]}
               >
@@ -568,6 +627,7 @@ const WishlistPage: React.FC = () => {
                       onEdit={handleEdit}
                       onDelete={handleDelete}
                       onDiverge={handleDiverge}
+                      onStatusChange={handleStatusChange}
                     />
                   ))
                 )}
