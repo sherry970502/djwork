@@ -29,6 +29,7 @@ import InsightsPage from './pages/InsightsPage';
 import PersonalDesignsPage from './pages/PersonalDesignsPage';
 import CreativeMindMapPage from './pages/CreativeMindMapPage';
 import LifeToolsPage from './pages/LifeToolsPage';
+import WishlistPage from './pages/WishlistPage';
 import LoginPage from './pages/LoginPage';
 
 const { Header, Content, Sider } = Layout;
@@ -148,6 +149,11 @@ const App: React.FC = () => {
       label: 'DJ 人生管理',
       children: [
         {
+          key: '/life/wishlist',
+          icon: <HeartOutlined />,
+          label: <Link to="/life/wishlist">DJ Wishlist</Link>
+        },
+        {
           key: '/life/tools',
           icon: <ToolOutlined />,
           label: <Link to="/life/tools">外部工具</Link>
@@ -168,6 +174,7 @@ const App: React.FC = () => {
     if (path.startsWith('/insights')) return '/insights';
     if (path === '/designs/mindmap') return '/designs/mindmap';
     if (path.startsWith('/designs')) return '/designs';
+    if (path.startsWith('/life/wishlist')) return '/life/wishlist';
     if (path.startsWith('/life/tools')) return '/life/tools';
     return '/';
   };
@@ -253,6 +260,7 @@ const App: React.FC = () => {
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/designs" element={<PersonalDesignsPage />} />
               <Route path="/designs/mindmap" element={<CreativeMindMapPage />} />
+              <Route path="/life/wishlist" element={<WishlistPage />} />
               <Route path="/life/tools" element={<LifeToolsPage />} />
             </Routes>
           </Content>

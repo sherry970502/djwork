@@ -6,6 +6,7 @@ const KnowledgeQA = require('./knowledgeQA');
 const MonthlyInsight = require('./monthlyInsight');
 const DesignDimension = require('./designDimension');
 const PersonalDesign = require('./personalDesign');
+const Wishlist = require('./wishlist');
 
 module.exports = {
   MeetingMinutes,
@@ -15,5 +16,6 @@ module.exports = {
   KnowledgeQA,
   MonthlyInsight,
   DesignDimension,
-  PersonalDesign
+  PersonalDesign,
+  Wishlist
 };

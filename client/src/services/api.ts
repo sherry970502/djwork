@@ -444,4 +444,42 @@ export const addManualNode = (id: string, data: { parentId: string; content: str
 export const deleteMindMap = (id: string) =>
   api.delete<ApiResponse<any>>(`/mindmaps/${id}`).then(res => res.data);
 
+// ==================== Wishlist APIs ====================
+
+// 获取 Wishlist
+export const getWishlist = () =>
+  api.get<ApiResponse<any[]>>('/wishlist').then(res => res.data);
+
+// 创建 Wishlist 项
+export const createWishlistItem = (data: { content: string; category?: string }) =>
+  api.post<ApiResponse<any>>('/wishlist', data).then(res => res.data);
+
+// 更新 Wishlist 项
+export const updateWishlistItem = (id: string, data: { content?: string; category?: string }) =>
+  api.put<ApiResponse<any>>(`/wishlist/${id}`, data).then(res => res.data);
+
+// 删除 Wishlist 项
+export const deleteWishlistItem = (id: string) =>
+  api.delete<ApiResponse<any>>(`/wishlist/${id}`).then(res => res.data);
+
+// 移动 Wishlist 项
+export const moveWishlistItem = (id: string, direction: 'up' | 'down') =>
+  api.post<ApiResponse<any>>(`/wishlist/${id}/move`, { direction }).then(res => res.data);
+
+// AI 自动分类
+export const autoClassifyWishlist = () =>
+  api.post<ApiResponse<any>>('/wishlist/auto-classify').then(res => res.data);
+
+// AI 总结
+export const summarizeWishlist = () =>
+  api.post<ApiResponse<{ summary: string }>>('/wishlist/summarize').then(res => res.data);
+
+// AI 发散单个项
+export const divergeWishlistItem = (id: string) =>
+  api.post<ApiResponse<{ suggestions: Array<{ content: string; reason: string }> }>>(`/wishlist/${id}/diverge`).then(res => res.data);
+
+// AI 推荐
+export const recommendWishlist = () =>
+  api.post<ApiResponse<{ recommendations: Array<{ content: string; reason: string }> }>>('/wishlist/recommend').then(res => res.data);
+
 export default api;
