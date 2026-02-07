@@ -327,18 +327,6 @@ const WishlistPage: React.FC = () => {
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      '个人成长': 'blue',
-      '健康生活': 'green',
-      '旅行探索': 'orange',
-      '创意项目': 'purple',
-      '人际关系': 'pink',
-      '学习发展': 'cyan',
-    };
-    return colors[category] || 'default';
-  };
-
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
