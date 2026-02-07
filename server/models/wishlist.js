@@ -10,6 +10,11 @@ const wishlistSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  status: {
+    type: String,
+    enum: ['近期目标', '已实现'],
+    default: null
+  },
   order: {
     type: Number,
     default: 0
@@ -29,5 +34,6 @@ const wishlistSchema = new mongoose.Schema({
 // 索引
 wishlistSchema.index({ order: 1 });
 wishlistSchema.index({ category: 1 });
+wishlistSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Wishlist', wishlistSchema);

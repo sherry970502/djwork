@@ -14,7 +14,10 @@ import {
   Typography,
   Spin,
   Alert,
-  Tabs
+  Tabs,
+  Select,
+  Radio,
+  Badge
 } from 'antd';
 import {
   PlusOutlined,
@@ -50,10 +53,21 @@ import * as api from '../services/api';
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
+// 预定义的分类
+const PREDEFINED_CATEGORIES = [
+  '宏大理想与社会贡献',
+  '学术地位与个人荣誉',
+  '艺术创作与兴趣',
+  '交通工具与生活品质',
+  '旅行与特殊体验',
+  '个人状态与自我提升'
+];
+
 interface WishlistItem {
   _id: string;
   content: string;
   category?: string;
+  status?: '近期目标' | '已实现' | null;
   order: number;
   createdAt: string;
 }
@@ -118,7 +132,7 @@ const SortableItem: React.FC<{
             <HolderOutlined />
           </div>
           <div style={{ flex: 1 }}>
-            <Space>
+            <Space wrap>
               <Text strong style={{ fontSize: 16 }}>
                 {item.content}
               </Text>
@@ -126,6 +140,12 @@ const SortableItem: React.FC<{
                 <Tag color={getCategoryColor(item.category)}>
                   {item.category}
                 </Tag>
+              )}
+              {item.status === '近期目标' && (
+                <Tag color="orange">近期目标</Tag>
+              )}
+              {item.status === '已实现' && (
+                <Tag color="green">已实现</Tag>
               )}
             </Space>
           </div>
@@ -200,6 +220,11 @@ const WishlistPage: React.FC = () => {
     }
     return items.filter(item => item.category === activeTab);
   }, [items, activeTab]);
+
+  // 计算近期目标项目
+  const recentGoals = useMemo(() => {
+    return items.filter(item => item.status === '近期目标');
+  }, [items]);
 
   // 拖拽传感器配置
   const sensors = useSensors(
@@ -377,6 +402,54 @@ const WishlistPage: React.FC = () => {
         </Space>
       </div>
 
+      {/* 近期目标模块 */}
+      {recentGoals.length > 0 && (
+        <Card
+          title={
+            <Space>
+              <Badge count={recentGoals.length} showZero={false}>
+                <StarOutlined style={{ fontSize: 18, color: '#ff9800' }} />
+              </Badge>
+              <Text strong>近期目标</Text>
+            </Space>
+          }
+          style={{ marginBottom: 24 }}
+          size="small"
+        >
+          <List
+            size="small"
+            dataSource={recentGoals}
+            renderItem={(item) => (
+              <List.Item
+                actions={[
+                  <Button
+                    key="edit"
+                    type="link"
+                    size="small"
+                    onClick={() => handleEdit(item)}
+                  >
+                    编辑
+                  </Button>
+                ]}
+              >
+                <List.Item.Meta
+                  title={
+                    <Space>
+                      <Text>{item.content}</Text>
+                      {item.category && (
+                        <Tag color="blue" style={{ marginLeft: 8 }}>
+                          {item.category}
+                        </Tag>
+                      )}
+                    </Space>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        </Card>
+      )}
+
       {/* AI 功能区 */}
       <Card style={{ marginBottom: 24 }}>
         <Space direction="vertical" style={{ width: '100%' }} size="large">
@@ -522,7 +595,21 @@ const WishlistPage: React.FC = () => {
             <TextArea rows={4} placeholder="输入你的愿望..." />
           </Form.Item>
           <Form.Item name="category" label="分类">
-            <Input placeholder="可选，如：旅行、学习、健康等" />
+            <Select
+              placeholder="选择分类"
+              allowClear
+              options={PREDEFINED_CATEGORIES.map(cat => ({
+                label: cat,
+                value: cat
+              }))}
+            />
+          </Form.Item>
+          <Form.Item name="status" label="状态">
+            <Radio.Group>
+              <Radio value={null}>无状态</Radio>
+              <Radio value="近期目标">近期目标</Radio>
+              <Radio value="已实现">已实现</Radio>
+            </Radio.Group>
           </Form.Item>
         </Form>
       </Modal>

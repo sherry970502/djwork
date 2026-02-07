@@ -60,11 +60,16 @@ exports.createItem = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { content, category } = req.body;
+    const { content, category, status } = req.body;
+
+    const updateData = { updatedAt: new Date() };
+    if (content !== undefined) updateData.content = content;
+    if (category !== undefined) updateData.category = category;
+    if (status !== undefined) updateData.status = status;
 
     const item = await Wishlist.findByIdAndUpdate(
       id,
-      { content, category, updatedAt: new Date() },
+      updateData,
       { new: true }
     );
 

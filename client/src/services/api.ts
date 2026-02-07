@@ -451,11 +451,11 @@ export const getWishlist = () =>
   api.get<ApiResponse<any[]>>('/wishlist').then(res => res.data);
 
 // 创建 Wishlist 项
-export const createWishlistItem = (data: { content: string; category?: string }) =>
+export const createWishlistItem = (data: { content: string; category?: string; status?: '近期目标' | '已实现' | null }) =>
   api.post<ApiResponse<any>>('/wishlist', data).then(res => res.data);
 
 // 更新 Wishlist 项
-export const updateWishlistItem = (id: string, data: { content?: string; category?: string }) =>
+export const updateWishlistItem = (id: string, data: { content?: string; category?: string; status?: '近期目标' | '已实现' | null }) =>
   api.put<ApiResponse<any>>(`/wishlist/${id}`, data).then(res => res.data);
 
 // 删除 Wishlist 项
