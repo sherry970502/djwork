@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Button,
@@ -13,7 +13,8 @@ import {
   Empty,
   Typography,
   Spin,
-  Alert
+  Alert,
+  Tabs
 } from 'antd';
 import {
   PlusOutlined,
@@ -177,6 +178,28 @@ const WishlistPage: React.FC = () => {
   const [selectedItemForDiverge, setSelectedItemForDiverge] = useState<WishlistItem | null>(null);
   const [recommendLoading, setRecommendLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<AISuggestion[]>([]);
+
+  // Tab 分类状态
+  const [activeTab, setActiveTab] = useState<string>('all');
+
+  // 计算所有唯一的分类
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set<string>();
+    items.forEach(item => {
+      if (item.category) {
+        uniqueCategories.add(item.category);
+      }
+    });
+    return Array.from(uniqueCategories).sort();
+  }, [items]);
+
+  // 根据选中的 Tab 过滤项目
+  const filteredItems = useMemo(() => {
+    if (activeTab === 'all') {
+      return items;
+    }
+    return items.filter(item => item.category === activeTab);
+  }, [items, activeTab]);
 
   // 拖拽传感器配置
   const sensors = useSensors(
@@ -434,26 +457,51 @@ const WishlistPage: React.FC = () => {
           </Button>
         </Empty>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={items.map(item => item._id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {items.map((item) => (
-              <SortableItem
-                key={item._id}
-                item={item}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onDiverge={handleDiverge}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
+        <>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={[
+              {
+                key: 'all',
+                label: `全部 (${items.length})`,
+              },
+              ...categories.map(category => ({
+                key: category,
+                label: `${category} (${items.filter(item => item.category === category).length})`,
+              })),
+            ]}
+          />
+          <div style={{ marginTop: 16 }}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={filteredItems.map(item => item._id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {filteredItems.length === 0 ? (
+                  <Empty
+                    description={`"${activeTab}" 分类下暂无内容`}
+                    style={{ marginTop: 40, marginBottom: 40 }}
+                  />
+                ) : (
+                  filteredItems.map((item) => (
+                    <SortableItem
+                      key={item._id}
+                      item={item}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onDiverge={handleDiverge}
+                    />
+                  ))
+                )}
+              </SortableContext>
+            </DndContext>
+          </div>
+        </>
       )}
 
       {/* 添加/编辑 Modal */}
