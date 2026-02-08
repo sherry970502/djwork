@@ -425,8 +425,8 @@ export const getMindMapByDesignId = (designId: string) =>
   api.get<ApiResponse<any>>(`/mindmaps/design/${designId}`).then(res => res.data);
 
 // AI 发散节点
-export const divergeNode = (id: string, nodeId: string) =>
-  api.post<ApiResponse<any>>(`/mindmaps/${id}/diverge`, { nodeId }).then(res => res.data);
+export const divergeNode = (id: string, nodeId: string, parentPosition?: { x: number; y: number }) =>
+  api.post<ApiResponse<any>>(`/mindmaps/${id}/diverge`, { nodeId, parentPosition }).then(res => res.data);
 
 // 更新节点
 export const updateMindMapNode = (id: string, nodeId: string, updates: any) =>
@@ -437,7 +437,7 @@ export const deleteMindMapNode = (id: string, nodeId: string) =>
   api.delete<ApiResponse<any>>(`/mindmaps/${id}/nodes`, { data: { nodeId } }).then(res => res.data);
 
 // 添加手动节点
-export const addManualNode = (id: string, data: { parentId: string; content: string; position?: { x: number; y: number } }) =>
+export const addManualNode = (id: string, data: { parentId: string; content: string; position?: { x: number; y: number }; parentPosition?: { x: number; y: number } }) =>
   api.post<ApiResponse<any>>(`/mindmaps/${id}/nodes`, data).then(res => res.data);
 
 // 删除思维导图

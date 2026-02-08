@@ -184,7 +184,11 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
       setDiverging(true);
       message.loading('AI 正在发散创意...', 0);
 
-      const response = await divergeNode(currentMindMapId, nodeId);
+      // 获取父节点当前位置
+      const parentNode = nodes.find(n => n.id === nodeId);
+      const parentPosition = parentNode?.position;
+
+      const response = await divergeNode(currentMindMapId, nodeId, parentPosition);
       console.log('Diverge response:', response);
 
       // 添加新节点和边
@@ -290,9 +294,14 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
     if (!currentMindMapId || !selectedParentId || !newNodeContent.trim()) return;
 
     try {
+      // 获取父节点当前位置
+      const parentNode = nodes.find(n => n.id === selectedParentId);
+      const parentPosition = parentNode?.position;
+
       const response = await addManualNode(currentMindMapId, {
         parentId: selectedParentId,
         content: newNodeContent.trim(),
+        parentPosition,
       });
 
       const newNode: Node = {

@@ -102,7 +102,7 @@ exports.getMindMapByDesignId = async (req, res) => {
 exports.divergeNode = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nodeId } = req.body;
+    const { nodeId, parentPosition } = req.body;
 
     const mindMap = await MindMap.findById(id);
 
@@ -121,6 +121,9 @@ exports.divergeNode = async (req, res) => {
         message: 'Node not found'
       });
     }
+
+    // 使用前端传递的位置（如果提供），否则使用数据库中的位置
+    const nodePosition = parentPosition || currentNode.position;
 
     // 构建上下文
     const parentNodes = [];
@@ -157,7 +160,7 @@ exports.divergeNode = async (req, res) => {
 
     // 检查父节点是否已有子节点，计算合理的起始位置
     const existingChildren = mindMap.nodes.filter(n => n.parentId === nodeId);
-    let startX = currentNode.position.x;
+    let startX = nodePosition.x;
 
     if (existingChildren.length > 0) {
       // 如果已有子节点，找到最右边的位置
@@ -165,7 +168,7 @@ exports.divergeNode = async (req, res) => {
       startX = maxX + 250; // 从最右边节点往右250px开始
     } else {
       // 如果没有子节点，从父节点位置开始，居中排列
-      startX = currentNode.position.x - (ideas.length - 1) * 100;
+      startX = nodePosition.x - (ideas.length - 1) * 100;
     }
 
     // 创建新节点，水平排列避免重叠
@@ -175,7 +178,7 @@ exports.divergeNode = async (req, res) => {
       parentId: nodeId,
       position: {
         x: startX + index * 200,
-        y: currentNode.position.y + 150
+        y: nodePosition.y + 150
       },
       isMarked: false,
       isAIGenerated: true,
@@ -301,7 +304,7 @@ exports.deleteNode = async (req, res) => {
 exports.addManualNode = async (req, res) => {
   try {
     const { id } = req.params;
-    const { parentId, content, position } = req.body;
+    const { parentId, content, position, parentPosition } = req.body;
 
     const mindMap = await MindMap.findById(id);
 
@@ -320,13 +323,16 @@ exports.addManualNode = async (req, res) => {
       });
     }
 
+    // 使用前端传递的父节点位置（如果提供），否则使用数据库中的位置
+    const nodePosition = parentPosition || parentNode.position;
+
     const newNode = {
       id: uuidv4(),
       content,
       parentId,
       position: position || {
-        x: parentNode.position.x,
-        y: parentNode.position.y + 150
+        x: nodePosition.x,
+        y: nodePosition.y + 150
       },
       isMarked: false,
       isAIGenerated: false,
