@@ -359,83 +359,80 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
   // 更新节点位置
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      // 先应用原始的 changes（让 React Flow 更新被拖动的节点）
-      onNodesChange(changes);
-
       // 处理位置变化，同步移动子节点
       const positionChanges = changes.filter(
         (change): change is NodeChange & { type: 'position'; position: { x: number; y: number } } =>
           change.type === 'position' && change.position !== undefined
       );
 
+      // 如果有位置变化，需要同步更新子节点
       if (positionChanges.length > 0) {
-        positionChanges.forEach((change: any) => {
-          // 拖动结束时保存到后端
-          if (!change.dragging) {
-            const currentMindMapId = mindMapIdRef.current;
-            if (currentMindMapId) {
-              // 使用 setTimeout 确保前面的 onNodesChange 状态更新已完成
-              setTimeout(() => {
-                setNodes(currentNodes => {
-                  const movedNode = currentNodes.find(n => n.id === change.id);
-                  if (!movedNode) return currentNodes;
+        // 先更新父节点和子节点的位置
+        setNodes(currentNodes => {
+          let updatedNodes = [...currentNodes];
 
-                  // 获取所有需要更新的节点（包括自己和子孙）
-                  const descendants = getDescendants(change.id, edges);
-                  const nodesToUpdate = [change.id, ...descendants];
+          positionChanges.forEach((change: any) => {
+            const movedNode = currentNodes.find(n => n.id === change.id);
+            if (!movedNode || !change.position) return;
 
-                  // 批量更新后端位置
-                  nodesToUpdate.forEach(async (id) => {
-                    const node = currentNodes.find(n => n.id === id);
-                    if (node) {
-                      try {
-                        await updateMindMapNode(currentMindMapId, id, {
-                          position: node.position,
-                        });
-                      } catch (error) {
-                        console.error(`Failed to update position for node ${id}:`, error);
-                      }
-                    }
-                  });
+            // 计算位置差值
+            const deltaX = change.position.x - movedNode.position.x;
+            const deltaY = change.position.y - movedNode.position.y;
 
-                  return currentNodes;
-                });
-              }, 0);
-            }
-          } else {
-            // 拖动中，实时更新子节点位置
-            setNodes(currentNodes => {
-              const movedNode = currentNodes.find(n => n.id === change.id);
-              if (!movedNode || !change.position) return currentNodes;
+            // 如果位置没有变化，跳过
+            if (deltaX === 0 && deltaY === 0) return;
 
-              // 计算位置差值
-              const deltaX = change.position.x - movedNode.position.x;
-              const deltaY = change.position.y - movedNode.position.y;
-
-              // 如果位置没有变化，跳过
-              if (deltaX === 0 && deltaY === 0) return currentNodes;
-
-              // 获取所有子孙节点
-              const descendants = getDescendants(change.id, edges);
-
-              // 更新所有子孙节点的位置
-              const updatedNodes = currentNodes.map(node => {
-                if (descendants.includes(node.id)) {
-                  return {
-                    ...node,
-                    position: {
-                      x: node.position.x + deltaX,
-                      y: node.position.y + deltaY,
-                    },
-                  };
-                }
-                return node;
-              });
-
-              return updatedNodes;
+            // 更新父节点位置
+            updatedNodes = updatedNodes.map(node => {
+              if (node.id === change.id) {
+                return { ...node, position: change.position };
+              }
+              return node;
             });
-          }
+
+            // 获取所有子孙节点并更新它们的位置
+            const descendants = getDescendants(change.id, edges);
+            updatedNodes = updatedNodes.map(node => {
+              if (descendants.includes(node.id)) {
+                return {
+                  ...node,
+                  position: {
+                    x: node.position.x + deltaX,
+                    y: node.position.y + deltaY,
+                  },
+                };
+              }
+              return node;
+            });
+
+            // 拖动结束时保存到后端
+            if (!change.dragging) {
+              const currentMindMapId = mindMapIdRef.current;
+              if (currentMindMapId) {
+                const nodesToUpdate = [change.id, ...descendants];
+
+                // 批量更新后端（使用更新后的位置）
+                nodesToUpdate.forEach(async (id) => {
+                  const node = updatedNodes.find(n => n.id === id);
+                  if (node) {
+                    try {
+                      await updateMindMapNode(currentMindMapId, id, {
+                        position: node.position,
+                      });
+                    } catch (error) {
+                      console.error(`Failed to update position for node ${id}:`, error);
+                    }
+                  }
+                });
+              }
+            }
+          });
+
+          return updatedNodes;
         });
+      } else {
+        // 如果不是位置变化，直接应用原始 changes
+        onNodesChange(changes);
       }
     },
     [onNodesChange, edges, getDescendants]
