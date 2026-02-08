@@ -369,9 +369,15 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
           change.type === 'position' && change.position !== undefined
       );
 
+      // 先处理非位置变化
+      const nonPositionChanges = changes.filter(change => change.type !== 'position');
+      if (nonPositionChanges.length > 0) {
+        onNodesChange(nonPositionChanges);
+      }
+
       // 如果有位置变化，需要同步更新子节点
       if (positionChanges.length > 0) {
-        // 先更新父节点和子节点的位置
+        // 更新父节点和子节点的位置
         setNodes(currentNodes => {
           let updatedNodes = [...currentNodes];
 
@@ -434,9 +440,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
           return updatedNodes;
         });
-      } else {
-        // 如果不是位置变化，直接应用原始 changes
-        onNodesChange(changes);
       }
     },
     [onNodesChange, edges, getDescendants]
