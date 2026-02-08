@@ -215,7 +215,7 @@ async function processAsync(meetingId) {
     let allThoughts = [];
     for (let i = 0; i < chunks.length; i++) {
       console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-      const extractedThoughts = await claudeService.extractThoughts(chunks[i], tags);
+      const extractedThoughts = await claudeService.extractThoughtsV2(chunks[i], tags);
       allThoughts = allThoughts.concat(extractedThoughts);
     }
 
