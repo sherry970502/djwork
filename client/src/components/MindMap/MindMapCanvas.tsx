@@ -185,7 +185,11 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
       message.loading('AI 正在发散创意...', 0);
 
       // 获取父节点当前位置
+      console.log('🎯 Diverge - Looking for nodeId:', nodeId);
+      console.log('🎯 Diverge - Total nodes:', nodes.length);
+      console.log('🎯 Diverge - All node IDs:', nodes.map(n => n.id));
       const parentNode = nodes.find(n => n.id === nodeId);
+      console.log('🎯 Diverge - Found parent node:', parentNode);
       const parentPosition = parentNode?.position;
       console.log('🎯 Diverge - Parent node position:', parentPosition);
 
