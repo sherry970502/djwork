@@ -187,6 +187,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
       // 获取父节点当前位置
       const parentNode = nodes.find(n => n.id === nodeId);
       const parentPosition = parentNode?.position;
+      console.log('🎯 Diverge - Parent node position:', parentPosition);
 
       const response = await divergeNode(currentMindMapId, nodeId, parentPosition);
       console.log('Diverge response:', response);

@@ -124,6 +124,9 @@ exports.divergeNode = async (req, res) => {
 
     // 使用前端传递的位置（如果提供），否则使用数据库中的位置
     const nodePosition = parentPosition || currentNode.position;
+    console.log('🎯 Diverge - Received parentPosition:', parentPosition);
+    console.log('🎯 Diverge - DB position:', currentNode.position);
+    console.log('🎯 Diverge - Using position:', nodePosition);
 
     // 构建上下文
     const parentNodes = [];
