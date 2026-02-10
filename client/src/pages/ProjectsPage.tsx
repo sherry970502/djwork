@@ -31,7 +31,10 @@ import {
   getProject,
   createProject,
   updateProject,
-  deleteProject
+  deleteProject,
+  syncProjectFromDesign,
+  getPersonalDesigns,
+  getAllProjects
 } from '../services/api';
 
 const { TextArea } = Input;
@@ -84,9 +87,14 @@ const ProjectsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [parentProject, setParentProject] = useState<string | null>(null);
+  const [availableDesigns, setAvailableDesigns] = useState<any[]>([]);
+  const [syncedDesignIds, setSyncedDesignIds] = useState<Set<string>>(new Set());
+  const [selectedDesignId, setSelectedDesignId] = useState<string>('');
+  const [syncParentId, setSyncParentId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -186,6 +194,73 @@ const ProjectsPage: React.FC = () => {
     }
   };
 
+  // 打开同步 Modal
+  const handleOpenSyncModal = async () => {
+    try {
+      setLoading(true);
+
+      // 获取所有个人设计
+      const designsResponse = await getPersonalDesigns({});
+      const allDesigns = designsResponse.data || [];
+
+      // 获取所有项目（扁平列表，用于查找已同步的设计）
+      const projectsResponse = await getAllProjects();
+      const allProjects = projectsResponse.data || [];
+
+      // 找出已经同步过的设计ID
+      const syncedIds = new Set(
+        allProjects
+          .filter((p: any) => p.syncedFromDesign)
+          .map((p: any) => p.syncedFromDesign._id || p.syncedFromDesign)
+      );
+
+      setSyncedDesignIds(syncedIds);
+      setAvailableDesigns(allDesigns);
+      setSyncModalOpen(true);
+    } catch (error: any) {
+      message.error('加载设计列表失败: ' + (error.message || '未知错误'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 执行同步
+  const handleSyncFromDesign = async () => {
+    if (!selectedDesignId) {
+      message.warning('请选择要同步的设计');
+      return;
+    }
+
+    try {
+      await syncProjectFromDesign({
+        designId: selectedDesignId,
+        parentId: syncParentId || undefined
+      });
+      message.success('同步成功');
+      setSyncModalOpen(false);
+      setSelectedDesignId('');
+      setSyncParentId(null);
+      loadProjects();
+    } catch (error: any) {
+      message.error('同步失败: ' + (error.message || '未知错误'));
+    }
+  };
+
+  // 获取项目选项（用于选择父项目）
+  const getProjectOptions = (projectList: Project[], level = 0): any[] => {
+    const options: any[] = [];
+    projectList.forEach(project => {
+      options.push({
+        label: '　'.repeat(level) + project.name,
+        value: project._id
+      });
+      if (project.children && project.children.length > 0) {
+        options.push(...getProjectOptions(project.children, level + 1));
+      }
+    });
+    return options;
+  };
+
   const renderProjectActions = (project: Project) => (
     <Space size="small">
       <Button
@@ -246,7 +321,7 @@ const ProjectsPage: React.FC = () => {
             </Button>
             <Button
               icon={<SyncOutlined />}
-              onClick={() => message.info('从设计同步功能开发中')}
+              onClick={handleOpenSyncModal}
             >
               从设计同步
             </Button>
@@ -498,6 +573,91 @@ const ProjectsPage: React.FC = () => {
             </Space>
           </div>
         )}
+      </Modal>
+
+      {/* 从设计同步 Modal */}
+      <Modal
+        title="从个人设计同步创建项目"
+        open={syncModalOpen}
+        onOk={handleSyncFromDesign}
+        onCancel={() => {
+          setSyncModalOpen(false);
+          setSelectedDesignId('');
+          setSyncParentId(null);
+        }}
+        okText="同步"
+        cancelText="取消"
+        width={600}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <div>
+            <div style={{ marginBottom: 8 }}>选择要同步的设计：</div>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="选择一个个人设计"
+              value={selectedDesignId || undefined}
+              onChange={setSelectedDesignId}
+              showSearch
+              optionFilterProp="children"
+            >
+              {availableDesigns.map(design => {
+                const isSynced = syncedDesignIds.has(design._id);
+                return (
+                  <Option
+                    key={design._id}
+                    value={design._id}
+                    disabled={isSynced}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{design.title}</span>
+                      {isSynced && <Tag color="default">已同步</Tag>}
+                    </div>
+                  </Option>
+                );
+              })}
+            </Select>
+          </div>
+
+          <div>
+            <div style={{ marginBottom: 8 }}>选择父项目（可选）：</div>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="不选择则作为根项目"
+              value={syncParentId || undefined}
+              onChange={setSyncParentId}
+              allowClear
+            >
+              {getProjectOptions(projects).map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+          </div>
+
+          {selectedDesignId && (
+            <div style={{ padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
+              <div style={{ fontSize: 12, color: '#666' }}>
+                {(() => {
+                  const selectedDesign = availableDesigns.find(d => d._id === selectedDesignId);
+                  if (!selectedDesign) return null;
+                  return (
+                    <>
+                      <div><strong>设计名称：</strong>{selectedDesign.title}</div>
+                      {selectedDesign.description && (
+                        <div style={{ marginTop: 4 }}>
+                          <strong>描述：</strong>
+                          {selectedDesign.description.substring(0, 100)}
+                          {selectedDesign.description.length > 100 ? '...' : ''}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </Space>
       </Modal>
     </div>
   );
