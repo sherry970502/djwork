@@ -260,6 +260,20 @@ ${keywordInfo.description ? `背景: ${keywordInfo.description}` : ''}
       // 计算评分
       const scores = this.calculateScores(result, keyword.keyword);
 
+      // 解析发布日期
+      let publishedAt = null;
+      if (result.date) {
+        try {
+          const parsedDate = new Date(result.date);
+          // 检查日期是否有效
+          if (!isNaN(parsedDate.getTime())) {
+            publishedAt = parsedDate;
+          }
+        } catch (e) {
+          console.warn(`[情报获取] 日期解析失败: ${result.date}`);
+        }
+      }
+
       // 创建情报记录（暂不分析）
       const report = new IntelligenceReport({
         keyword: keyword._id,
@@ -268,7 +282,7 @@ ${keywordInfo.description ? `背景: ${keywordInfo.description}` : ''}
         content: result.snippet || '',
         sourceUrl: result.link,
         sourceName: this.extractSourceName(result.link),
-        publishedAt: result.date ? new Date(result.date) : null,
+        publishedAt: publishedAt,
         fetchedAt: new Date(),
         ...scores
       });
