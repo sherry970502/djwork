@@ -411,70 +411,101 @@ export default function IntelligencePage() {
               return (
                 <Card
                   key={report._id}
-                  size="small"
                   hoverable
-                  actions={[
-                    <Button
-                      type="text"
-                      icon={report.isBookmarked ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
-                      onClick={() => handleToggleBookmark(report._id)}
-                    >
-                      {report.isBookmarked ? '已关注' : '关注'}
-                    </Button>,
-                    <Button
-                      type="text"
-                      icon={<LinkOutlined />}
-                      onClick={() => window.open(report.sourceUrl, '_blank')}
-                    >
-                      查看原文
-                    </Button>,
-                    report.aiAnalysis?.analyzedAt ? (
-                      <Tooltip title="已分析">
-                        <Button type="text" icon={<BulbOutlined />} style={{ color: '#52c41a' }}>
-                          已分析
-                        </Button>
-                      </Tooltip>
-                    ) : (
-                      <Button
-                        type="text"
-                        icon={<BulbOutlined />}
-                        loading={analyzing === report._id}
-                        onClick={() => handleAnalyze(report._id)}
-                      >
-                        AI 分析
-                      </Button>
-                    )
-                  ]}
+                  style={{ borderLeft: report.isBookmarked ? '4px solid #faad14' : '4px solid transparent' }}
                 >
-                  <div style={{ marginBottom: '12px' }}>
-                    <Space>
+                  {/* 评分和操作栏 */}
+                  <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Space size="middle">
                       <Tag color={getCategoryColor(keyword?.category || '其他')}>
                         {keyword?.keyword || '未知关键词'}
                       </Tag>
                       <Tag icon={<FireOutlined />} color="red">
-                        热度 {report.hotScore}
+                        {report.hotScore}
                       </Tag>
-                      <Tag icon={<ClockCircleOutlined />}>
+                      <Tag icon={<ThunderboltOutlined />} color="orange">
+                        {report.relevanceScore}
+                      </Tag>
+                      <Tag icon={<ClockCircleOutlined />} color="blue">
                         {report.publishedAt
-                          ? new Date(report.publishedAt).toLocaleDateString('zh-CN')
-                          : new Date(report.fetchedAt).toLocaleDateString('zh-CN')}
+                          ? `${Math.floor((new Date().getTime() - new Date(report.publishedAt).getTime()) / (1000 * 60 * 60))}小时前`
+                          : '刚刚'}
                       </Tag>
-                      <Text type="secondary">{report.sourceName}</Text>
                     </Space>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={report.isBookmarked ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
+                      onClick={() => handleToggleBookmark(report._id)}
+                    />
                   </div>
 
-                  <Title level={5} style={{ marginBottom: '8px' }}>
-                    {report.title}
-                  </Title>
+                  {/* 核心结论（主要展示） */}
+                  {report.conclusion && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ marginBottom: '4px' }}>
+                        <Text strong style={{ fontSize: '13px', color: '#8c8c8c' }}>【核心结论】</Text>
+                      </div>
+                      <Paragraph style={{ fontSize: '15px', margin: 0, lineHeight: '1.6' }}>
+                        {report.conclusion}
+                      </Paragraph>
+                    </div>
+                  )}
 
-                  <Paragraph
-                    type="secondary"
-                    ellipsis={{ rows: 2 }}
-                    style={{ marginBottom: '12px' }}
+                  {/* 参考价值（主要展示） */}
+                  {report.referenceValue && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ marginBottom: '4px' }}>
+                        <Text strong style={{ fontSize: '13px', color: '#8c8c8c' }}>【参考价值】</Text>
+                      </div>
+                      <Paragraph style={{ fontSize: '15px', margin: 0, lineHeight: '1.6' }}>
+                        {report.referenceValue}
+                      </Paragraph>
+                    </div>
+                  )}
+
+                  {/* 原文资料（样式弱化） */}
+                  <div
+                    style={{
+                      background: '#fafafa',
+                      borderRadius: '4px',
+                      padding: '12px',
+                      fontSize: '13px',
+                      color: '#8c8c8c'
+                    }}
                   >
-                    {report.summary || report.content}
-                  </Paragraph>
+                    <div style={{ marginBottom: '6px' }}>
+                      <Text style={{ fontSize: '12px', color: '#bfbfbf' }}>📰 原文标题：</Text>
+                      <Text style={{ fontSize: '13px', color: '#595959' }}>{report.title}</Text>
+                    </div>
+                    <div style={{ marginBottom: '6px' }}>
+                      <Text style={{ fontSize: '12px', color: '#bfbfbf' }}>📝 摘要：</Text>
+                      <Text style={{ fontSize: '13px', color: '#8c8c8c' }}>
+                        {(report.summary || report.content).substring(0, 100)}...
+                      </Text>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <Text style={{ fontSize: '12px', color: '#bfbfbf' }}>🔗 来源：</Text>
+                        <Text style={{ fontSize: '13px', color: '#8c8c8c' }}>{report.sourceName}</Text>
+                        <Text style={{ fontSize: '12px', color: '#bfbfbf', marginLeft: '8px' }}>
+                          {report.publishedAt
+                            ? new Date(report.publishedAt).toLocaleString('zh-CN')
+                            : new Date(report.fetchedAt).toLocaleString('zh-CN')}
+                        </Text>
+                      </div>
+                      <Button
+                        type="link"
+                        size="small"
+                        icon={<LinkOutlined />}
+                        onClick={() => window.open(report.sourceUrl, '_blank')}
+                      >
+                        查看原文
+                      </Button>
+                    </div>
+                  </div>
 
+                  {/* 详细 AI 分析（可选，折叠展示） */}
                   {report.aiAnalysis?.analyzedAt && (
                     <div
                       style={{
@@ -482,11 +513,12 @@ export default function IntelligencePage() {
                         border: '1px solid #b7eb8f',
                         borderRadius: '4px',
                         padding: '12px',
-                        marginTop: '12px'
+                        marginTop: '12px',
+                        fontSize: '13px'
                       }}
                     >
                       <div style={{ marginBottom: '8px' }}>
-                        <Text strong>💡 AI 分析</Text>
+                        <Text strong style={{ fontSize: '14px' }}>💡 详细分析</Text>
                       </div>
 
                       {report.aiAnalysis.businessValue && (
@@ -528,6 +560,21 @@ export default function IntelligencePage() {
                           </ul>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* 手动触发详细分析按钮 */}
+                  {!report.aiAnalysis?.analyzedAt && (
+                    <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                      <Button
+                        type="dashed"
+                        size="small"
+                        icon={<BulbOutlined />}
+                        loading={analyzing === report._id}
+                        onClick={() => handleAnalyze(report._id)}
+                      >
+                        查看详细分析
+                      </Button>
                     </div>
                   )}
                 </Card>

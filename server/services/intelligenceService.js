@@ -65,7 +65,74 @@ class IntelligenceService {
   }
 
   /**
-   * AI 分析情报的业务价值
+   * AI 提炼情报核心结论和参考价值
+   */
+  async extractIntelligenceInsight(report, keywordInfo) {
+    const prompt = `你是 DJ 的战略情报分析助手。请分析以下信息，提炼出对 DJ 有价值的核心结论。
+
+## 情报原文
+标题: ${report.title}
+摘要: ${report.summary || report.content.substring(0, 500)}
+来源: ${report.sourceName}
+
+## DJ 的业务背景
+- 核心业务：AI+教育，通过"快乐、有效、有趣"重塑教育生态
+- 当前关注：${keywordInfo.keyword}${keywordInfo.description ? ` - ${keywordInfo.description}` : ''}
+- 核心优势：游戏基因、AI生产线、OpenQuest/Cube平台
+
+## 请完成以下任务
+
+1. **核心结论**（1-2句话）：
+   - 这条信息的核心观点是什么？
+   - 用简洁、明确的语言概括关键趋势或事实
+
+2. **参考价值**（1-2句话）：
+   - 这对 DJ 的 ${keywordInfo.category || '相关'} 工作有什么启发或借鉴？
+   - 可以如何应用到业务中，或需要规避什么风险？
+   - 采用"混合型"风格：先客观陈述关联性，再给出建议
+
+## 输出格式
+{
+  "conclusion": "核心结论，1-2句话，客观陈述事实或趋势",
+  "referenceValue": "参考价值，1-2句话，先说关联性再给建议"
+}
+
+只输出 JSON，不要其他内容。`;
+
+    try {
+      const response = await this.anthropic.messages.create({
+        model: this.model,
+        max_tokens: 512,
+        messages: [{ role: 'user', content: prompt }]
+      });
+
+      const text = response.content[0].text.trim();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+      if (jsonMatch) {
+        const result = JSON.parse(jsonMatch[0]);
+        return {
+          conclusion: result.conclusion || '',
+          referenceValue: result.referenceValue || ''
+        };
+      }
+
+      return {
+        conclusion: '提炼失败',
+        referenceValue: ''
+      };
+
+    } catch (error) {
+      console.error('[情报提炼] 失败:', error.message);
+      return {
+        conclusion: `提炼失败: ${error.message}`,
+        referenceValue: ''
+      };
+    }
+  }
+
+  /**
+   * AI 分析情报的业务价值（保留旧方法，用于详细分析）
    */
   async analyzeIntelligence(report, keywordInfo) {
     const prompt = `你是 DJ 的战略情报分析助手。请分析以下情报对业务的价值和启发。
@@ -274,7 +341,7 @@ ${keywordInfo.description ? `背景: ${keywordInfo.description}` : ''}
         }
       }
 
-      // 创建情报记录（暂不分析）
+      // 创建情报记录
       const report = new IntelligenceReport({
         keyword: keyword._id,
         title: result.title,
@@ -287,10 +354,16 @@ ${keywordInfo.description ? `背景: ${keywordInfo.description}` : ''}
         ...scores
       });
 
+      // 立即提炼核心结论和参考价值
+      console.log(`[情报提炼] 正在分析: ${result.title.substring(0, 50)}...`);
+      const insight = await this.extractIntelligenceInsight(report, keyword);
+      report.conclusion = insight.conclusion;
+      report.referenceValue = insight.referenceValue;
+
       await report.save();
       reports.push(report);
 
-      console.log(`[情报获取] 新增: ${result.title.substring(0, 50)}`);
+      console.log(`[情报获取] 新增: ${result.title.substring(0, 30)}... | 结论: ${insight.conclusion.substring(0, 40)}...`);
     }
 
     // 更新关键词的最后获取时间和报告计数

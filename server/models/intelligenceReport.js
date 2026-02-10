@@ -6,6 +6,17 @@ const intelligenceReportSchema = new mongoose.Schema({
     ref: 'IntelligenceKeyword',
     required: true
   },
+  // AI 提炼的核心情报（主要展示）
+  conclusion: {
+    type: String,
+    default: ''  // AI 提炼的核心结论（1-2句话）
+  },
+  referenceValue: {
+    type: String,
+    default: ''  // 对当前工作的参考价值（1-2句话）
+  },
+
+  // 原始资料（弱化展示）
   title: {
     type: String,
     required: true

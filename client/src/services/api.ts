@@ -593,6 +593,12 @@ export interface IntelligenceKeyword {
 export interface IntelligenceReport {
   _id: string;
   keyword: IntelligenceKeyword | string;
+
+  // AI 提炼的核心情报（主要展示）
+  conclusion?: string;       // 核心结论
+  referenceValue?: string;   // 参考价值
+
+  // 原始资料（弱化展示）
   title: string;
   summary: string;
   content: string;
@@ -600,11 +606,17 @@ export interface IntelligenceReport {
   sourceName: string;
   publishedAt?: Date;
   fetchedAt: Date;
+
+  // 评分系统
   relevanceScore: number;
   hotScore: number;
   freshnessScore: number;
+
+  // 用户交互
   isBookmarked: boolean;
   bookmarkedAt?: Date;
+
+  // 详细 AI 分析（可选，用于展开查看）
   aiAnalysis?: {
     businessValue: string;
     insights: string[];
@@ -613,6 +625,7 @@ export interface IntelligenceReport {
     potentialIssues: string[];
     analyzedAt?: Date;
   };
+
   createdAt: Date;
   updatedAt: Date;
 }
