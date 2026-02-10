@@ -28,6 +28,7 @@ import KnowledgePage from './pages/KnowledgePage';
 import InsightsPage from './pages/InsightsPage';
 import PersonalDesignsPage from './pages/PersonalDesignsPage';
 import CreativeMindMapPage from './pages/CreativeMindMapPage';
+import ProjectsPage from './pages/ProjectsPage';
 import LifeToolsPage from './pages/LifeToolsPage';
 import WishlistPage from './pages/WishlistPage';
 import LoginPage from './pages/LoginPage';
@@ -140,6 +141,11 @@ const App: React.FC = () => {
           key: '/designs/mindmap',
           icon: <ThunderboltOutlined />,
           label: <Link to="/designs/mindmap">创意发散</Link>
+        },
+        {
+          key: '/projects',
+          icon: <RocketOutlined />,
+          label: <Link to="/projects">个人项目管理</Link>
         }
       ]
     },
@@ -173,6 +179,7 @@ const App: React.FC = () => {
     if (path.startsWith('/knowledge')) return '/knowledge';
     if (path.startsWith('/insights')) return '/insights';
     if (path === '/designs/mindmap') return '/designs/mindmap';
+    if (path.startsWith('/projects')) return '/projects';
     if (path.startsWith('/designs')) return '/designs';
     if (path.startsWith('/life/wishlist')) return '/life/wishlist';
     if (path.startsWith('/life/tools')) return '/life/tools';
@@ -260,6 +267,7 @@ const App: React.FC = () => {
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/designs" element={<PersonalDesignsPage />} />
               <Route path="/designs/mindmap" element={<CreativeMindMapPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/life/wishlist" element={<WishlistPage />} />
               <Route path="/life/tools" element={<LifeToolsPage />} />
             </Routes>

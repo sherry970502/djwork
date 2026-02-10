@@ -486,4 +486,49 @@ export const recommendWishlist = () =>
 export const reorderWishlist = (items: Array<{ _id: string; order: number }>) =>
   api.post<ApiResponse<any>>('/wishlist/reorder', { items }).then(res => res.data);
 
+// ==================== Projects APIs ====================
+
+// 获取所有项目（扁平列表）
+export const getAllProjects = () =>
+  api.get<ApiResponse<any[]>>('/projects').then(res => res.data);
+
+// 获取项目树
+export const getProjectTree = () =>
+  api.get<ApiResponse<any[]>>('/projects/tree').then(res => res.data);
+
+// 获取单个项目
+export const getProject = (id: string) =>
+  api.get<ApiResponse<any>>(`/projects/${id}`).then(res => res.data);
+
+// 创建项目
+export const createProject = (data: {
+  name: string;
+  purpose?: string;
+  description?: string;
+  parentId?: string;
+  status?: string;
+  priority?: string;
+}) =>
+  api.post<ApiResponse<any>>('/projects', data).then(res => res.data);
+
+// 更新项目
+export const updateProject = (id: string, data: any) =>
+  api.put<ApiResponse<any>>(`/projects/${id}`, data).then(res => res.data);
+
+// 删除项目
+export const deleteProject = (id: string) =>
+  api.delete<ApiResponse<any>>(`/projects/${id}`).then(res => res.data);
+
+// 从设计同步创建项目
+export const syncProjectFromDesign = (data: { designId: string; parentId?: string }) =>
+  api.post<ApiResponse<any>>('/projects/sync-from-design', data).then(res => res.data);
+
+// AI 建议项目
+export const getProjectSuggestions = () =>
+  api.get<ApiResponse<any>>('/projects/suggestions').then(res => res.data);
+
+// 调整项目顺序
+export const reorderProjects = (projects: Array<{ _id: string; order: number }>) =>
+  api.post<ApiResponse<any>>('/projects/reorder', { projects }).then(res => res.data);
+
 export default api;
