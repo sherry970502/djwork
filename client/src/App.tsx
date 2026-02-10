@@ -35,6 +35,7 @@ import IntelligencePage from './pages/IntelligencePage';
 import LifeToolsPage from './pages/LifeToolsPage';
 import WishlistPage from './pages/WishlistPage';
 import LoginPage from './pages/LoginPage';
+import NotificationDropdown from './components/NotificationDropdown';
 
 const { Header, Content, Sider } = Layout;
 
@@ -259,14 +260,17 @@ const App: React.FC = () => {
             <h2 className="header-title" style={{ margin: 0 }}>
               DJ 工作事务处理系统
             </h2>
-            <Button
-              type="text"
-              icon={<LogoutOutlined />}
-              onClick={handleLogout}
-              style={{ color: 'inherit' }}
-            >
-              退出登录
-            </Button>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <NotificationDropdown />
+              <Button
+                type="text"
+                icon={<LogoutOutlined />}
+                onClick={handleLogout}
+                style={{ color: 'inherit' }}
+              >
+                退出登录
+              </Button>
+            </div>
           </Header>
           <Content className="modern-content">
             <Routes>

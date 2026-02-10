@@ -699,4 +699,67 @@ export const getIntelligenceStats = () =>
     todayReports: number;
   }>>('/intelligence/stats').then(res => res.data);
 
+// ==================== Notification APIs ====================
+
+export interface Notification {
+  _id: string;
+  type: 'monthly-review' | 'monthly-start' | 'progress-warning' | 'intelligence-daily';
+  title: string;
+  content: string;
+  relatedLink: string;
+  isRead: boolean;
+  readAt?: Date;
+  isProcessed: boolean;
+  processedAt?: Date;
+  priority: 'low' | 'medium' | 'high';
+  metadata?: {
+    count?: number;
+    monthYear?: string;
+    progress?: number;
+    keywords?: string[];
+  };
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date;
+}
+
+// 获取通知列表
+export const getNotifications = (params?: {
+  isRead?: boolean;
+  type?: string;
+  limit?: number;
+}) =>
+  api.get<ApiResponse<Notification[]>>('/notifications', { params }).then(res => res.data);
+
+// 获取未读数量
+export const getUnreadNotificationCount = () =>
+  api.get<ApiResponse<{ count: number }>>('/notifications/unread-count').then(res => res.data);
+
+// 标记为已读
+export const markNotificationAsRead = (id: string) =>
+  api.put<ApiResponse<Notification>>(`/notifications/${id}/read`).then(res => res.data);
+
+// 批量标记已读
+export const markAllNotificationsAsRead = () =>
+  api.post<ApiResponse<{ modifiedCount: number }>>('/notifications/mark-all-read').then(res => res.data);
+
+// 标记为已处理
+export const markNotificationAsProcessed = (id: string) =>
+  api.put<ApiResponse<Notification>>(`/notifications/${id}/process`).then(res => res.data);
+
+// 删除通知
+export const deleteNotification = (id: string) =>
+  api.delete<ApiResponse<void>>(`/notifications/${id}`).then(res => res.data);
+
+// 创建通知（测试用）
+export const createNotification = (data: {
+  type: string;
+  title: string;
+  content: string;
+  relatedLink?: string;
+  priority?: string;
+  metadata?: any;
+}) =>
+  api.post<ApiResponse<Notification>>('/notifications', data).then(res => res.data);
+
 export default api;

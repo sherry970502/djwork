@@ -22,10 +22,14 @@ const wishlistRouter = require('./routes/wishlist');
 const projectsRouter = require('./routes/projects');
 const expertsRouter = require('./routes/experts');
 const intelligenceRouter = require('./routes/intelligence');
+const notificationsRouter = require('./routes/notifications');
 
 // Import controllers for initialization
 const { initPresetTags } = require('./controllers/tagController');
 const { initPresetDimensions } = require('./controllers/designController');
+
+// Import notification scheduler
+const { initScheduler } = require('./services/notificationScheduler');
 
 const app = express();
 
@@ -68,6 +72,7 @@ app.use('/api/wishlist', wishlistRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/experts', expertsRouter);
 app.use('/api/intelligence', intelligenceRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -170,6 +175,9 @@ const startServer = async () => {
     // Initialize preset design dimensions
     await initPresetDimensions();
     console.log('Preset design dimensions initialized');
+
+    // Initialize notification scheduler
+    initScheduler();
 
     app.listen(config.port, () => {
       console.log(`Server running on port ${config.port}`);

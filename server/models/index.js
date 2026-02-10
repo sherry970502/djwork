@@ -10,6 +10,7 @@ const Wishlist = require('./wishlist');
 const Project = require('./project');
 const IntelligenceKeyword = require('./intelligenceKeyword');
 const IntelligenceReport = require('./intelligenceReport');
+const Notification = require('./notification');
 
 module.exports = {
   MeetingMinutes,
@@ -23,5 +24,6 @@ module.exports = {
   Wishlist,
   Project,
   IntelligenceKeyword,
-  IntelligenceReport
+  IntelligenceReport,
+  Notification
 };
