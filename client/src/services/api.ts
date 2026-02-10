@@ -535,4 +535,41 @@ export const suggestDesignPlacement = (designId: string) =>
 export const reorderProjects = (projects: Array<{ _id: string; order: number }>) =>
   api.post<ApiResponse<any>>('/projects/reorder', { projects }).then(res => res.data);
 
+// ==================== Expert Consultant APIs ====================
+
+export interface Expert {
+  id: string;
+  name: string;
+  nameEn: string;
+  avatar: string;
+  description: string;
+}
+
+export interface ExpertConsultation {
+  expertId: string;
+  expertName: string;
+  question: string;
+  answer: string;
+  isComplete: boolean;
+  timestamp: Date;
+}
+
+// 获取所有专家
+export const getExperts = () =>
+  api.get<ApiResponse<Expert[]>>('/experts').then(res => res.data);
+
+// 获取单个专家信息
+export const getExpert = (id: string) =>
+  api.get<ApiResponse<Expert>>(`/experts/${id}`).then(res => res.data);
+
+// 咨询专家
+export const consultExpert = (id: string, question: string, context?: any[]) =>
+  api.post<ApiResponse<ExpertConsultation>>(`/experts/${id}/consult`, { question, context }).then(res => res.data);
+
+// 流式咨询（分段返回）
+export const consultExpertStreaming = (id: string, question: string) =>
+  api.post(`/experts/${id}/consult-streaming`, { question }, {
+    responseType: 'stream'
+  });
+
 export default api;

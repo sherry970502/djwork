@@ -29,6 +29,7 @@ import InsightsPage from './pages/InsightsPage';
 import PersonalDesignsPage from './pages/PersonalDesignsPage';
 import CreativeMindMapPage from './pages/CreativeMindMapPage';
 import ProjectsPage from './pages/ProjectsPage';
+import ExpertConsultantPage from './pages/ExpertConsultantPage';
 import LifeToolsPage from './pages/LifeToolsPage';
 import WishlistPage from './pages/WishlistPage';
 import LoginPage from './pages/LoginPage';
@@ -143,6 +144,11 @@ const App: React.FC = () => {
           label: <Link to="/designs/mindmap">创意发散</Link>
         },
         {
+          key: '/experts',
+          icon: <RocketOutlined />,
+          label: <Link to="/experts">专家智囊团</Link>
+        },
+        {
           key: '/projects',
           icon: <RocketOutlined />,
           label: <Link to="/projects">个人项目管理</Link>
@@ -179,6 +185,7 @@ const App: React.FC = () => {
     if (path.startsWith('/knowledge')) return '/knowledge';
     if (path.startsWith('/insights')) return '/insights';
     if (path === '/designs/mindmap') return '/designs/mindmap';
+    if (path.startsWith('/experts')) return '/experts';
     if (path.startsWith('/projects')) return '/projects';
     if (path.startsWith('/designs')) return '/designs';
     if (path.startsWith('/life/wishlist')) return '/life/wishlist';
@@ -194,7 +201,7 @@ const App: React.FC = () => {
     if (['/tasks', '/knowledge', '/insights'].some(p => path.startsWith(p))) {
       return ['task-group'];
     }
-    if (path.startsWith('/designs')) {
+    if (path.startsWith('/designs') || path.startsWith('/experts') || path.startsWith('/projects')) {
       return ['design-group'];
     }
     if (path.startsWith('/life')) {
@@ -267,6 +274,7 @@ const App: React.FC = () => {
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/designs" element={<PersonalDesignsPage />} />
               <Route path="/designs/mindmap" element={<CreativeMindMapPage />} />
+              <Route path="/experts" element={<ExpertConsultantPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/life/wishlist" element={<WishlistPage />} />
               <Route path="/life/tools" element={<LifeToolsPage />} />
