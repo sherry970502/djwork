@@ -14,7 +14,8 @@ import {
   CalendarOutlined,
   LogoutOutlined,
   HeartOutlined,
-  ToolOutlined
+  ToolOutlined,
+  GlobalOutlined
 } from '@ant-design/icons';
 import HomePage from './pages/HomePage';
 import MonthlyPlanPage from './pages/MonthlyPlanPage';
@@ -30,6 +31,7 @@ import PersonalDesignsPage from './pages/PersonalDesignsPage';
 import CreativeMindMapPage from './pages/CreativeMindMapPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ExpertConsultantPage from './pages/ExpertConsultantPage';
+import IntelligencePage from './pages/IntelligencePage';
 import LifeToolsPage from './pages/LifeToolsPage';
 import WishlistPage from './pages/WishlistPage';
 import LoginPage from './pages/LoginPage';
@@ -125,6 +127,11 @@ const App: React.FC = () => {
           key: '/insights',
           icon: <RocketOutlined />,
           label: <Link to="/insights">月度洞察</Link>
+        },
+        {
+          key: '/intelligence',
+          icon: <GlobalOutlined />,
+          label: <Link to="/intelligence">AI情报</Link>
         }
       ]
     },
@@ -184,6 +191,7 @@ const App: React.FC = () => {
     if (path.startsWith('/tasks')) return '/tasks';
     if (path.startsWith('/knowledge')) return '/knowledge';
     if (path.startsWith('/insights')) return '/insights';
+    if (path.startsWith('/intelligence')) return '/intelligence';
     if (path === '/designs/mindmap') return '/designs/mindmap';
     if (path.startsWith('/experts')) return '/experts';
     if (path.startsWith('/projects')) return '/projects';
@@ -198,7 +206,7 @@ const App: React.FC = () => {
     if (['/meetings', '/thoughts', '/similarity', '/tags'].some(p => path.startsWith(p))) {
       return ['knowledge-group'];
     }
-    if (['/tasks', '/knowledge', '/insights'].some(p => path.startsWith(p))) {
+    if (['/tasks', '/knowledge', '/insights', '/intelligence'].some(p => path.startsWith(p))) {
       return ['task-group'];
     }
     if (path.startsWith('/designs') || path.startsWith('/experts') || path.startsWith('/projects')) {
@@ -272,6 +280,7 @@ const App: React.FC = () => {
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="/knowledge" element={<KnowledgePage />} />
               <Route path="/insights" element={<InsightsPage />} />
+              <Route path="/intelligence" element={<IntelligencePage />} />
               <Route path="/designs" element={<PersonalDesignsPage />} />
               <Route path="/designs/mindmap" element={<CreativeMindMapPage />} />
               <Route path="/experts" element={<ExpertConsultantPage />} />

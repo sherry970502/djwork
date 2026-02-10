@@ -572,4 +572,118 @@ export const consultExpertStreaming = (id: string, question: string) =>
     responseType: 'stream'
   });
 
+// ==================== Intelligence APIs ====================
+
+export interface IntelligenceKeyword {
+  _id: string;
+  keyword: string;
+  description?: string;
+  category: string;
+  isActive: boolean;
+  priority: string;
+  searchQuery?: string;
+  lastFetchedAt?: Date;
+  source: string;
+  createdBy: string;
+  reportCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IntelligenceReport {
+  _id: string;
+  keyword: IntelligenceKeyword | string;
+  title: string;
+  summary: string;
+  content: string;
+  sourceUrl: string;
+  sourceName: string;
+  publishedAt?: Date;
+  fetchedAt: Date;
+  relevanceScore: number;
+  hotScore: number;
+  freshnessScore: number;
+  isBookmarked: boolean;
+  bookmarkedAt?: Date;
+  aiAnalysis?: {
+    businessValue: string;
+    insights: string[];
+    actionItems: string[];
+    relatedConcepts: string[];
+    potentialIssues: string[];
+    analyzedAt?: Date;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 关键词管理
+export const getIntelligenceKeywords = (params?: { isActive?: boolean }) =>
+  api.get<ApiResponse<IntelligenceKeyword[]>>('/intelligence/keywords', { params }).then(res => res.data);
+
+export const createIntelligenceKeyword = (data: {
+  keyword: string;
+  description?: string;
+  category?: string;
+  priority?: string;
+  searchQuery?: string;
+}) =>
+  api.post<ApiResponse<IntelligenceKeyword>>('/intelligence/keywords', data).then(res => res.data);
+
+export const updateIntelligenceKeyword = (id: string, data: Partial<IntelligenceKeyword>) =>
+  api.put<ApiResponse<IntelligenceKeyword>>(`/intelligence/keywords/${id}`, data).then(res => res.data);
+
+export const deleteIntelligenceKeyword = (id: string) =>
+  api.delete<ApiResponse<void>>(`/intelligence/keywords/${id}`).then(res => res.data);
+
+// 情报管理
+export const getIntelligenceReports = (params?: {
+  page?: number;
+  limit?: number;
+  keyword?: string;
+  isBookmarked?: boolean;
+  sortBy?: 'hot' | 'latest' | 'relevant';
+  search?: string;
+}) =>
+  api.get<ApiResponse<IntelligenceReport[]>>('/intelligence/reports', { params }).then(res => res.data);
+
+export const getIntelligenceReport = (id: string) =>
+  api.get<ApiResponse<IntelligenceReport>>(`/intelligence/reports/${id}`).then(res => res.data);
+
+export const toggleIntelligenceBookmark = (id: string) =>
+  api.post<ApiResponse<IntelligenceReport>>(`/intelligence/reports/${id}/bookmark`).then(res => res.data);
+
+export const deleteIntelligenceReport = (id: string) =>
+  api.delete<ApiResponse<void>>(`/intelligence/reports/${id}`).then(res => res.data);
+
+// 情报获取
+export const fetchIntelligenceForKeyword = (keywordId: string, data?: {
+  timeRange?: 'd' | 'w' | 'm';
+  limit?: number;
+}) =>
+  api.post<ApiResponse<any>>(`/intelligence/keywords/${keywordId}/fetch`, data).then(res => res.data);
+
+export const fetchAllIntelligence = (data?: {
+  timeRange?: 'd' | 'w' | 'm';
+  limit?: number;
+}) =>
+  api.post<ApiResponse<any>>('/intelligence/fetch-all', data).then(res => res.data);
+
+// AI 分析
+export const analyzeIntelligenceReport = (id: string) =>
+  api.post<ApiResponse<IntelligenceReport>>(`/intelligence/reports/${id}/analyze`).then(res => res.data);
+
+export const batchAnalyzeIntelligence = (reportIds: string[]) =>
+  api.post<ApiResponse<any>>('/intelligence/analyze-batch', { reportIds }).then(res => res.data);
+
+// 统计信息
+export const getIntelligenceStats = () =>
+  api.get<ApiResponse<{
+    totalKeywords: number;
+    activeKeywords: number;
+    totalReports: number;
+    bookmarkedReports: number;
+    todayReports: number;
+  }>>('/intelligence/stats').then(res => res.data);
+
 export default api;

@@ -8,6 +8,8 @@ const DesignDimension = require('./designDimension');
 const PersonalDesign = require('./personalDesign');
 const Wishlist = require('./wishlist');
 const Project = require('./project');
+const IntelligenceKeyword = require('./intelligenceKeyword');
+const IntelligenceReport = require('./intelligenceReport');
 
 module.exports = {
   MeetingMinutes,
@@ -19,5 +21,7 @@ module.exports = {
   DesignDimension,
   PersonalDesign,
   Wishlist,
-  Project
+  Project,
+  IntelligenceKeyword,
+  IntelligenceReport
 };
