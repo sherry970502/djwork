@@ -371,3 +371,118 @@ exports.reorderProjects = async (req, res) => {
     });
   }
 };
+
+// AI 建议设计归属位置
+exports.suggestPlacement = async (req, res) => {
+  try {
+    const { designId } = req.body;
+
+    if (!designId) {
+      return res.status(400).json({
+        success: false,
+        message: '缺少设计ID'
+      });
+    }
+
+    const design = await PersonalDesign.findById(designId);
+    if (!design) {
+      return res.status(404).json({
+        success: false,
+        message: '设计不存在'
+      });
+    }
+
+    // 获取所有项目（构建树形结构描述）
+    const allProjects = await Project.find()
+      .select('_id name purpose description level parentId')
+      .sort({ level: 1, order: 1 });
+
+    // 构建项目树的文本描述
+    const buildProjectTree = (parentId = null, indent = 0) => {
+      const children = allProjects.filter(p => {
+        if (parentId === null) return p.parentId === null;
+        return p.parentId && p.parentId.toString() === parentId.toString();
+      });
+
+      let treeText = '';
+      children.forEach(project => {
+        const prefix = '  '.repeat(indent);
+        treeText += `${prefix}- ${project.name} (ID: ${project._id})\n`;
+        if (project.purpose) {
+          treeText += `${prefix}  目的: ${project.purpose}\n`;
+        }
+        // 递归添加子项目
+        treeText += buildProjectTree(project._id, indent + 1);
+      });
+
+      return treeText;
+    };
+
+    const projectTreeText = buildProjectTree();
+
+    // 调用 Claude API 分析
+    const Anthropic = require('@anthropic-ai/sdk');
+    const config = require('../config');
+    const client = new Anthropic({ apiKey: config.claudeApiKey });
+
+    // 限制项目树文本长度，避免超出 Haiku 上下文限制
+    let limitedProjectTreeText = projectTreeText;
+    if (projectTreeText.length > 3000) {
+      // 如果项目树太大，截取前3000字符并提示
+      limitedProjectTreeText = projectTreeText.substring(0, 3000) + '\n... (更多项目已省略)';
+    }
+
+    const prompt = `你是一个项目管理助手。我有一个新的设计需要归入项目结构中，请分析它应该放在哪里。
+
+【当前项目结构】
+${limitedProjectTreeText || '（目前没有任何项目）'}
+
+【新设计信息】
+标题: ${design.title}
+描述: ${design.description ? design.description.substring(0, 500) : ''}
+${design.inspiration ? `灵感: ${design.inspiration.substring(0, 200)}` : ''}
+${design.category ? `分类: ${design.category}` : ''}
+
+【分析要求】
+判断此设计应该：
+1. 归入现有项目（如果主题相关）
+2. 创建为新根项目（如果是全新方向）
+
+返回 JSON：
+{
+  "recommendation": "existing" 或 "new",
+  "parentId": "项目ID" 或 null,
+  "parentName": "父项目名" 或 null,
+  "reason": "理由（2句话）",
+  "confidence": "high" 或 "medium" 或 "low"
+}
+
+只返回 JSON。`;
+
+    const message = await client.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 1000,
+      temperature: 0.3,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const responseText = message.content[0].text.trim();
+    const jsonText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const suggestion = JSON.parse(jsonText);
+
+    res.json({
+      success: true,
+      data: {
+        designId,
+        designTitle: design.title,
+        suggestion
+      }
+    });
+  } catch (error) {
+    console.error('Suggest placement error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

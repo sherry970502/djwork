@@ -527,6 +527,10 @@ export const syncProjectFromDesign = (data: { designId: string; parentId?: strin
 export const getProjectSuggestions = () =>
   api.get<ApiResponse<any>>('/projects/suggestions').then(res => res.data);
 
+// AI 建议设计归属位置
+export const suggestDesignPlacement = (designId: string) =>
+  api.post<ApiResponse<any>>('/projects/suggest-placement', { designId }).then(res => res.data);
+
 // 调整项目顺序
 export const reorderProjects = (projects: Array<{ _id: string; order: number }>) =>
   api.post<ApiResponse<any>>('/projects/reorder', { projects }).then(res => res.data);

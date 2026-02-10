@@ -34,7 +34,8 @@ import {
   deleteProject,
   syncProjectFromDesign,
   getDesigns,
-  getAllProjects
+  getAllProjects,
+  suggestDesignPlacement
 } from '../services/api';
 
 const { TextArea } = Input;
@@ -95,6 +96,8 @@ const ProjectsPage: React.FC = () => {
   const [syncedDesignIds, setSyncedDesignIds] = useState<Set<string>>(new Set());
   const [selectedDesignId, setSelectedDesignId] = useState<string>('');
   const [syncParentId, setSyncParentId] = useState<string | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<any>(null);
+  const [analyzingPlacement, setAnalyzingPlacement] = useState(false);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -224,6 +227,33 @@ const ProjectsPage: React.FC = () => {
     }
   };
 
+  // 处理设计选择变化
+  const handleDesignSelect = async (designId: string) => {
+    setSelectedDesignId(designId);
+    setAiSuggestion(null);
+    setSyncParentId(null);
+
+    if (!designId) return;
+
+    // 自动调用 AI 分析
+    try {
+      setAnalyzingPlacement(true);
+      const response = await suggestDesignPlacement(designId);
+      const suggestion = response.data.suggestion;
+      setAiSuggestion(suggestion);
+
+      // 如果 AI 建议归入现有项目，自动设置父项目
+      if (suggestion.recommendation === 'existing' && suggestion.parentId) {
+        setSyncParentId(suggestion.parentId);
+      }
+    } catch (error: any) {
+      console.error('AI 分析失败:', error);
+      // AI 分析失败不影响用户继续操作
+    } finally {
+      setAnalyzingPlacement(false);
+    }
+  };
+
   // 执行同步
   const handleSyncFromDesign = async () => {
     if (!selectedDesignId) {
@@ -240,6 +270,7 @@ const ProjectsPage: React.FC = () => {
       setSyncModalOpen(false);
       setSelectedDesignId('');
       setSyncParentId(null);
+      setAiSuggestion(null);
       loadProjects();
     } catch (error: any) {
       message.error('同步失败: ' + (error.message || '未知错误'));
@@ -584,6 +615,7 @@ const ProjectsPage: React.FC = () => {
           setSyncModalOpen(false);
           setSelectedDesignId('');
           setSyncParentId(null);
+          setAiSuggestion(null);
         }}
         okText="同步"
         cancelText="取消"
@@ -596,9 +628,10 @@ const ProjectsPage: React.FC = () => {
               style={{ width: '100%' }}
               placeholder="选择一个个人设计"
               value={selectedDesignId || undefined}
-              onChange={setSelectedDesignId}
+              onChange={handleDesignSelect}
               showSearch
               optionFilterProp="children"
+              loading={analyzingPlacement}
             >
               {availableDesigns.map(design => {
                 const isSynced = syncedDesignIds.has(design._id);
@@ -617,6 +650,49 @@ const ProjectsPage: React.FC = () => {
               })}
             </Select>
           </div>
+
+          {/* AI 建议 */}
+          {analyzingPlacement && (
+            <div style={{ padding: 16, background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
+              <Spin size="small" /> <span style={{ marginLeft: 8 }}>AI 正在分析最佳归属位置...</span>
+            </div>
+          )}
+
+          {aiSuggestion && (
+            <div style={{
+              padding: 16,
+              background: aiSuggestion.recommendation === 'existing' ? '#f6ffed' : '#fff7e6',
+              border: `1px solid ${aiSuggestion.recommendation === 'existing' ? '#b7eb8f' : '#ffd591'}`,
+              borderRadius: 4
+            }}>
+              <div style={{ marginBottom: 8 }}>
+                <strong>🤖 AI 建议：</strong>
+                {aiSuggestion.recommendation === 'existing' ? (
+                  <Tag color="green">归入现有项目</Tag>
+                ) : (
+                  <Tag color="orange">创建为新项目</Tag>
+                )}
+                <Tag color={
+                  aiSuggestion.confidence === 'high' ? 'green' :
+                  aiSuggestion.confidence === 'medium' ? 'orange' : 'default'
+                }>
+                  {aiSuggestion.confidence === 'high' ? '高置信度' :
+                   aiSuggestion.confidence === 'medium' ? '中等置信度' : '低置信度'}
+                </Tag>
+              </div>
+              {aiSuggestion.parentName && (
+                <div style={{ marginBottom: 8 }}>
+                  <strong>推荐父项目：</strong>{aiSuggestion.parentName}
+                </div>
+              )}
+              <div style={{ fontSize: 13, color: '#666' }}>
+                <strong>理由：</strong>{aiSuggestion.reason}
+              </div>
+              <div style={{ marginTop: 8, fontSize: 12, color: '#999' }}>
+                💡 你可以接受此建议，或手动选择其他位置
+              </div>
+            </div>
+          )}
 
           <div>
             <div style={{ marginBottom: 8 }}>选择父项目（可选）：</div>

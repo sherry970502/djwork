@@ -11,6 +11,9 @@ router.get('/tree', projectController.getProjectTree);
 // AI 建议项目
 router.get('/suggestions', projectController.suggestProjects);
 
+// AI 建议设计归属位置
+router.post('/suggest-placement', projectController.suggestPlacement);
+
 // 获取单个项目
 router.get('/:id', projectController.getProject);
 
