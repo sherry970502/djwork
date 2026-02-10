@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Button,
@@ -16,7 +16,6 @@ import {
   Empty,
   Spin,
   Tooltip,
-  Divider,
   Badge
 } from 'antd';
 import {
@@ -27,7 +26,6 @@ import {
   FireOutlined,
   ClockCircleOutlined,
   ThunderboltOutlined,
-  DeleteOutlined,
   BulbOutlined,
   LinkOutlined,
   SearchOutlined
