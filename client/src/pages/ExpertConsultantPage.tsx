@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Button, Input, Select, Space, Typography, Spin, message, Empty, Divider } from 'antd';
-import { SendOutlined, UserOutlined, RobotOutlined, ClearOutlined } from '@ant-design/icons';
-import { getExperts, consultExpert, type Expert, type ExpertConsultation } from '../services/api';
+import { Card, Button, Input, Select, Space, Typography, Spin, message, Empty } from 'antd';
+import { SendOutlined, UserOutlined, ClearOutlined } from '@ant-design/icons';
+import { getExperts, consultExpert, type Expert } from '../services/api';
 import ReactMarkdown from 'react-markdown';
 
 const { Title, Text, Paragraph } = Typography;
