@@ -33,7 +33,7 @@ import {
   updateProject,
   deleteProject,
   syncProjectFromDesign,
-  getPersonalDesigns,
+  getDesigns,
   getAllProjects
 } from '../services/api';
 
@@ -200,7 +200,7 @@ const ProjectsPage: React.FC = () => {
       setLoading(true);
 
       // 获取所有个人设计
-      const designsResponse = await getPersonalDesigns({});
+      const designsResponse = await getDesigns({});
       const allDesigns = designsResponse.data || [];
 
       // 获取所有项目（扁平列表，用于查找已同步的设计）
