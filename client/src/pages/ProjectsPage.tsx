@@ -31,8 +31,7 @@ import {
   getProject,
   createProject,
   updateProject,
-  deleteProject,
-  getProjectSuggestions
+  deleteProject
 } from '../services/api';
 
 const { TextArea } = Input;
@@ -62,7 +61,10 @@ interface Project {
   children?: Project[];
 }
 
-const statusConfig = {
+type StatusType = 'conception' | 'planning' | 'active' | 'paused' | 'completed' | 'archived';
+type PriorityType = 'high' | 'medium' | 'low';
+
+const statusConfig: Record<StatusType, { label: string; color: string }> = {
   conception: { label: '构思阶段', color: 'blue' },
   planning: { label: '规划阶段', color: 'cyan' },
   active: { label: '正式执行', color: 'green' },
@@ -71,7 +73,7 @@ const statusConfig = {
   archived: { label: '已归档', color: 'default' }
 };
 
-const priorityConfig = {
+const priorityConfig: Record<PriorityType, { label: string; color: string }> = {
   high: { label: '高', color: 'red' },
   medium: { label: '中', color: 'orange' },
   low: { label: '低', color: 'green' }
@@ -110,8 +112,8 @@ const ProjectsPage: React.FC = () => {
       title: (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>{project.name}</span>
-          <Tag color={statusConfig[project.status as keyof typeof statusConfig]?.color}>
-            {statusConfig[project.status as keyof typeof statusConfig]?.label}
+          <Tag color={statusConfig[project.status as StatusType]?.color}>
+            {statusConfig[project.status as StatusType]?.label}
           </Tag>
           {project.progress > 0 && (
             <span style={{ fontSize: 12, color: '#999' }}>{project.progress}%</span>
@@ -283,11 +285,11 @@ const ProjectsPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontWeight: 500 }}>{project.name}</span>
-                    <Tag color={statusConfig[project.status]?.color}>
-                      {statusConfig[project.status]?.label}
+                    <Tag color={statusConfig[project.status as StatusType]?.color}>
+                      {statusConfig[project.status as StatusType]?.label}
                     </Tag>
-                    <Tag color={priorityConfig[project.priority]?.color}>
-                      {priorityConfig[project.priority]?.label}
+                    <Tag color={priorityConfig[project.priority as PriorityType]?.color}>
+                      {priorityConfig[project.priority as PriorityType]?.label}
                     </Tag>
                     {project.progress > 0 && (
                       <Progress
@@ -434,12 +436,12 @@ const ProjectsPage: React.FC = () => {
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
               <div>
                 <strong>状态：</strong>
-                <Tag color={statusConfig[selectedProject.status]?.color}>
-                  {statusConfig[selectedProject.status]?.label}
+                <Tag color={statusConfig[selectedProject.status as StatusType]?.color}>
+                  {statusConfig[selectedProject.status as StatusType]?.label}
                 </Tag>
                 <strong style={{ marginLeft: 16 }}>优先级：</strong>
-                <Tag color={priorityConfig[selectedProject.priority]?.color}>
-                  {priorityConfig[selectedProject.priority]?.label}
+                <Tag color={priorityConfig[selectedProject.priority as PriorityType]?.color}>
+                  {priorityConfig[selectedProject.priority as PriorityType]?.label}
                 </Tag>
                 {selectedProject.progress > 0 && (
                   <>
@@ -480,8 +482,8 @@ const ProjectsPage: React.FC = () => {
                     {selectedProject.children.map((child: any) => (
                       <li key={child._id}>
                         {child.name}
-                        <Tag color={statusConfig[child.status]?.color} style={{ marginLeft: 8 }}>
-                          {statusConfig[child.status]?.label}
+                        <Tag color={statusConfig[child.status as StatusType]?.color} style={{ marginLeft: 8 }}>
+                          {statusConfig[child.status as StatusType]?.label}
                         </Tag>
                       </li>
                     ))}
