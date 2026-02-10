@@ -236,9 +236,14 @@ async function processAsync(meetingId) {
       const thoughtDoc = new Thought({
         meetingMinutesId: meeting._id,
         content: thought.content,
-        originalSegment: thought.originalSegment || '',
+        contentType: thought.contentType || 'IDEA',
+        speaker: thought.speaker || 'DJ',
+        originalQuote: thought.originalQuote || '',
+        context: thought.context || '',
+        originalSegment: thought.originalSegment || thought.originalQuote || '',
         tags: tagIds,
         confidence: thought.confidence || 0.8,
+        extractionVersion: thought.extractionVersion || 2,
         isImportant: thought.isImportant || false
       });
 
