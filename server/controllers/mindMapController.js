@@ -102,7 +102,7 @@ exports.getMindMapByDesignId = async (req, res) => {
 exports.divergeNode = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nodeId, parentPosition } = req.body;
+    const { nodeId, parentPosition, userGuidance } = req.body;
 
     const mindMap = await MindMap.findById(id);
 
@@ -157,7 +157,8 @@ exports.divergeNode = async (req, res) => {
         markedNodes,
         level: currentNode.level + 1,
         isRoot: currentNode.level === 0,
-        rootContent
+        rootContent,
+        userGuidance // 传递用户引导信息
       }
     );
 

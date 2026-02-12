@@ -8,7 +8,7 @@ class CreativeDivergenceService {
    * @returns {Promise<Array>} 发散的创意节点
    */
   async divergeFromNode(nodeContent, context = {}) {
-    const { parentNodes = [], markedNodes = [], level = 1, isRoot = false, rootContent = '' } = context;
+    const { parentNodes = [], markedNodes = [], level = 1, isRoot = false, rootContent = '', userGuidance = '' } = context;
 
     let prompt;
 
@@ -54,6 +54,10 @@ class CreativeDivergenceService {
         ? `\n\n用户特别感兴趣的方向：${markedNodes.join(', ')}`
         : '';
 
+      const guidanceInfo = userGuidance
+        ? `\n\n【用户引导信息】\n${userGuidance}\n⚠️ 请优先满足用户引导的方向和要求，确保生成的内容与用户的期望高度对齐。`
+        : '';
+
       // 根据层级调整发散策略
       let strategyGuide = '';
       if (level === 1) {
@@ -94,7 +98,7 @@ class CreativeDivergenceService {
 
 【思维导图上下文】
 原始主题：${rootContent || nodeContent}
-当前节点：${nodeContent}${contextInfo}${interestInfo}
+当前节点：${nodeContent}${contextInfo}${interestInfo}${guidanceInfo}
 
 ${strategyGuide}
 

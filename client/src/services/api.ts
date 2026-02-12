@@ -425,8 +425,12 @@ export const getMindMapByDesignId = (designId: string) =>
   api.get<ApiResponse<any>>(`/mindmaps/design/${designId}`).then(res => res.data);
 
 // AI 发散节点
-export const divergeNode = (id: string, nodeId: string, parentPosition?: { x: number; y: number }) =>
-  api.post<ApiResponse<any>>(`/mindmaps/${id}/diverge`, { nodeId, parentPosition }).then(res => res.data);
+export const divergeNode = (id: string, nodeId: string, options?: { parentPosition?: { x: number; y: number }; userGuidance?: string }) =>
+  api.post<ApiResponse<any>>(`/mindmaps/${id}/diverge`, {
+    nodeId,
+    parentPosition: options?.parentPosition,
+    userGuidance: options?.userGuidance
+  }).then(res => res.data);
 
 // 更新节点
 export const updateMindMapNode = (id: string, nodeId: string, updates: any) =>

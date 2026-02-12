@@ -49,6 +49,11 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
   const [showUnmarkedOnly, setShowUnmarkedOnly] = useState(false);
 
+  // 发散引导相关
+  const [divergeModalOpen, setDivergeModalOpen] = useState(false);
+  const [divergeNodeId, setDivergeNodeId] = useState<string | null>(null);
+  const [userGuidance, setUserGuidance] = useState('');
+
   // 加载或创建思维导图
   useEffect(() => {
     loadMindMap();
@@ -167,16 +172,26 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
     }
   };
 
-  // AI 发散
-  const handleDiverge = async (nodeId: string) => {
-    const currentMindMapId = mindMapIdRef.current;
-    console.log('handleDiverge called:', nodeId, 'mindMapId:', currentMindMapId, 'diverging:', diverging);
-    if (!currentMindMapId) {
-      message.warning('思维导图未加载');
-      return;
-    }
+  // 打开发散引导 Modal
+  const handleDiverge = (nodeId: string) => {
+    console.log('handleDiverge called:', nodeId);
     if (diverging) {
       message.warning('正在发散中，请稍候');
+      return;
+    }
+    setDivergeNodeId(nodeId);
+    setUserGuidance('');
+    setDivergeModalOpen(true);
+  };
+
+  // 确认发散（执行实际的发散逻辑）
+  const handleConfirmDiverge = async () => {
+    const currentMindMapId = mindMapIdRef.current;
+    const nodeId = divergeNodeId;
+
+    console.log('handleConfirmDiverge called:', nodeId, 'mindMapId:', currentMindMapId);
+    if (!currentMindMapId || !nodeId) {
+      message.warning('参数错误');
       return;
     }
 
@@ -186,14 +201,14 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
       // 获取父节点当前位置
       console.log('🎯 Diverge - Looking for nodeId:', nodeId);
-      console.log('🎯 Diverge - Total nodes:', nodes.length);
-      console.log('🎯 Diverge - All node IDs:', nodes.map(n => n.id));
       const parentNode = nodes.find(n => n.id === nodeId);
       console.log('🎯 Diverge - Found parent node:', parentNode);
       const parentPosition = parentNode?.position;
-      console.log('🎯 Diverge - Parent node position:', parentPosition);
 
-      const response = await divergeNode(currentMindMapId, nodeId, parentPosition);
+      const response = await divergeNode(currentMindMapId, nodeId, {
+        parentPosition,
+        userGuidance: userGuidance.trim() || undefined
+      });
       console.log('Diverge response:', response);
 
       // 添加新节点和边
@@ -229,6 +244,10 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
 
       message.destroy();
       message.success(`✨ 已发散 ${newFlowNodes.length} 个创意方向`);
+
+      // 关闭 Modal
+      setDivergeModalOpen(false);
+      setUserGuidance('');
     } catch (error: any) {
       console.error('Diverge error:', error);
       message.destroy();
@@ -573,6 +592,54 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ designId, designTitle }) 
         <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px' }}>
           Ctrl/Cmd + Enter 快速添加
         </Text>
+      </Modal>
+
+      {/* AI 发散引导模态框 */}
+      <Modal
+        title="🤖 AI 创意发散"
+        open={divergeModalOpen}
+        onCancel={() => {
+          setDivergeModalOpen(false);
+          setUserGuidance('');
+        }}
+        onOk={handleConfirmDiverge}
+        okText="开始发散 ✨"
+        cancelText="取消"
+        confirmLoading={diverging}
+        width={500}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 8, fontWeight: 500 }}>
+            📝 当前节点内容
+          </div>
+          <div
+            style={{
+              padding: '12px',
+              background: '#f5f5f5',
+              borderRadius: '4px',
+              color: '#666',
+              lineHeight: '1.6',
+            }}
+          >
+            {divergeNodeId ? nodes.find((n) => n.id === divergeNodeId)?.data.label : ''}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ marginBottom: 8, fontWeight: 500 }}>
+            💡 引导信息（可选）
+          </div>
+          <Input
+            placeholder="例如：重点考虑小学生场景，结合任运IP..."
+            value={userGuidance}
+            onChange={(e) => setUserGuidance(e.target.value)}
+            maxLength={100}
+            showCount
+          />
+          <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+            提示：留空则直接发散，填写后 AI 会结合你的引导生成更精准的方向
+          </Text>
+        </div>
       </Modal>
     </div>
   );
