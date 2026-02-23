@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Card,
   Input,
@@ -8,19 +7,13 @@ import {
   Typography,
   Spin,
   message,
-  Tag,
-  Divider,
-  Row,
-  Col,
-  Empty,
-  Progress
+  Empty
 } from 'antd';
 import {
   SendOutlined,
   RobotOutlined,
   UserOutlined,
-  ThunderboltOutlined,
-  LinkOutlined
+  ThunderboltOutlined
 } from '@ant-design/icons';
 import {
   sendAgentMessage,
@@ -34,10 +27,9 @@ import AgentContentBlocks from '../components/AgentContentBlocks';
 import dayjs from 'dayjs';
 
 const { TextArea } = Input;
-const { Text, Title, Paragraph } = Typography;
+const { Text, Title } = Typography;
 
 const AgentPage: React.FC = () => {
-  const navigate = useNavigate();
   const [messages, setMessages] = useState<Array<AgentMessage & { toolCalls?: any[]; blocks?: any[] }>>([]);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
