@@ -35,6 +35,7 @@ import IntelligencePage from './pages/IntelligencePage';
 import LifeToolsPage from './pages/LifeToolsPage';
 import WishlistPage from './pages/WishlistPage';
 import LoginPage from './pages/LoginPage';
+import AgentPage from './pages/AgentPage';
 import NotificationDropdown from './components/NotificationDropdown';
 
 const { Header, Content, Sider } = Layout;
@@ -76,6 +77,11 @@ const App: React.FC = () => {
       key: '/',
       icon: <HomeOutlined />,
       label: <Link to="/">首页</Link>
+    },
+    {
+      key: '/agent',
+      icon: <RocketOutlined />,
+      label: <Link to="/agent">AI 工作助手</Link>
     },
     {
       key: '/monthly-plan',
@@ -184,6 +190,7 @@ const App: React.FC = () => {
 
   const getSelectedKey = () => {
     const path = location.pathname;
+    if (path.startsWith('/agent')) return '/agent';
     if (path.startsWith('/monthly-plan')) return '/monthly-plan';
     if (path.startsWith('/meetings')) return '/meetings';
     if (path.startsWith('/thoughts')) return '/thoughts';
@@ -275,6 +282,7 @@ const App: React.FC = () => {
           <Content className="modern-content">
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/agent" element={<AgentPage />} />
               <Route path="/monthly-plan" element={<MonthlyPlanPage />} />
               <Route path="/meetings" element={<MeetingsPage />} />
               <Route path="/meetings/:id" element={<MeetingDetailPage />} />

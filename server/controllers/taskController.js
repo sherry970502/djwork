@@ -378,16 +378,44 @@ exports.analyzeTask = async (req, res) => {
     task.status = 'analyzing';
     await task.save();
 
-    // Start async analysis
-    analyzeTaskAsync(task._id).catch(error => {
-      console.error('Async analysis error:', error);
-    });
+    // Execute analysis and wait for completion
+    try {
+      // Find related thoughts
+      const relatedThoughts = await strategicAdvisorService.findRelatedThoughts(
+        `${task.title} ${task.description}`,
+        10
+      );
 
-    res.json({
-      success: true,
-      message: 'Analysis started',
-      data: task
-    });
+      console.log(`Found ${relatedThoughts.length} related thoughts for task: ${task.title}`);
+
+      // Analyze task
+      const analysis = await strategicAdvisorService.analyzeTask(task, relatedThoughts);
+
+      // Update task
+      task.analysis = analysis;
+      task.category = analysis.categoryPrediction;
+      task.status = 'completed';
+      await task.save();
+
+      console.log(`Task analysis completed: ${task.title}`);
+
+      // Return the analysis result
+      res.json({
+        success: true,
+        message: 'Analysis completed',
+        data: {
+          task,
+          analysis: analysis.analysis,
+          suggestions: analysis.suggestions || [],
+          nextSteps: analysis.nextSteps || []
+        }
+      });
+    } catch (analysisError) {
+      console.error('Task analysis failed:', analysisError);
+      task.status = 'pending';
+      await task.save();
+      throw analysisError;
+    }
   } catch (error) {
     res.status(500).json({
       success: false,

@@ -766,4 +766,65 @@ export const createNotification = (data: {
 }) =>
   api.post<ApiResponse<Notification>>('/notifications', data).then(res => res.data);
 
+// ==================== Agent APIs ====================
+
+export interface AgentMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp?: Date;
+}
+
+export interface AgentToolCall {
+  toolName: string;
+  result: any;
+}
+
+export interface AgentResponse {
+  reply: string;
+  toolCalls?: AgentToolCall[];
+  blocks?: any[];
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+  };
+}
+
+export interface QuickScenario {
+  id: string;
+  icon: string;
+  title: string;
+  prompt: string;
+}
+
+export interface ConversationHistory {
+  conversationId: string;
+  messages: (AgentMessage & { toolCalls?: any[]; blocks?: any[] })[];
+}
+
+// 发送对话消息
+export const sendAgentMessage = (data: {
+  message: string;
+  conversationHistory?: AgentMessage[];
+}) =>
+  api.post<ApiResponse<AgentResponse>>('/agent/chat', data).then(res => res.data);
+
+// 获取快捷场景
+export const getAgentScenarios = () =>
+  api.get<ApiResponse<QuickScenario[]>>('/agent/scenarios').then(res => res.data);
+
+// 获取对话历史
+export const getConversationHistory = () =>
+  api.get<ApiResponse<ConversationHistory>>('/agent/history').then(res => res.data);
+
+// 保存对话历史
+export const saveConversation = (data: {
+  conversationId?: string;
+  messages: (AgentMessage & { toolCalls?: any[]; blocks?: any[] })[];
+}) =>
+  api.post<ApiResponse<{ conversationId: string }>>('/agent/save', data).then(res => res.data);
+
+// 清空对话历史
+export const clearConversationHistory = () =>
+  api.delete<ApiResponse<{ message: string }>>('/agent/history').then(res => res.data);
+
 export default api;

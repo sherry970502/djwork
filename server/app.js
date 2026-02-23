@@ -23,6 +23,7 @@ const projectsRouter = require('./routes/projects');
 const expertsRouter = require('./routes/experts');
 const intelligenceRouter = require('./routes/intelligence');
 const notificationsRouter = require('./routes/notifications');
+const agentRouter = require('./routes/agent');
 
 // Import controllers for initialization
 const { initPresetTags } = require('./controllers/tagController');
@@ -73,6 +74,7 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/experts', expertsRouter);
 app.use('/api/intelligence', intelligenceRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/agent', agentRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
