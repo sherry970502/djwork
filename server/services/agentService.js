@@ -127,17 +127,16 @@ class AgentService {
     switch (scenario.type) {
       case 'decision_making':
       case 'meeting_prep':
-        // 展示月度计划中待处理的事务列表
+        // 模块1：待分析的事务（需要前置AI分析）
         if (contextData.tasks && contextData.tasks.length > 0) {
-          // 优先显示需要分析的任务
-          const needsAnalysisTasks = contextData.tasks.filter(t => t.needsAnalysis);
-          const displayTasks = needsAnalysisTasks.length > 0 ? needsAnalysisTasks : contextData.tasks;
+          const needsAnalysisTasks = contextData.tasks.filter(t => t.needsAnalysis || !t.hasAnalysis);
 
-          blocks.push({
-            type: 'task_list',
-            title: '本月计划中待处理的事务',
-            description: '以下是本月度计划中待分析和决策的事务。这些是当月重点关注的工作项目。',
-            items: displayTasks.slice(0, 10).map(task => {
+          if (needsAnalysisTasks.length > 0) {
+            blocks.push({
+              type: 'task_list',
+              title: '📋 待分析事务',
+              description: '以下事务需要进行前置AI分析，帮助决策是否执行及如何执行。',
+              items: needsAnalysisTasks.slice(0, 10).map(task => {
               // 如果是 task 类型，使用 organizationTask 的信息
               const orgTask = task.organizationTask;
               const taskId = orgTask ? orgTask._id : task._id;
@@ -158,12 +157,12 @@ class AgentService {
                 actions: (() => {
                   // 如果有关联的组织事务
                   if (orgTask) {
-                    // 已有分析结果 - 只显示查看详情
+                    // 已有分析结果 - 显示查看分析，跳转到组织事务池详情页
                     if (task.hasAnalysis) {
                       return [{
                         type: 'view',
                         label: '查看分析',
-                        link: `/tasks?taskId=${taskId}`
+                        link: `/tasks/${taskId}` // 修正：直接跳转到详情页
                       }];
                     }
                     // 正在分析中 - 显示分析中状态
@@ -171,7 +170,7 @@ class AgentService {
                       return [{
                         type: 'view',
                         label: '分析中...',
-                        link: `/tasks?taskId=${taskId}`,
+                        link: `/tasks/${taskId}`,
                         disabled: true
                       }];
                     }
@@ -184,7 +183,7 @@ class AgentService {
                       }];
                     }
                   }
-                  // 非组织事务类型的项目
+                  // 非组织事务类型的项目 - 跳转到月度计划
                   else {
                     return [{
                       type: 'view',
@@ -196,6 +195,36 @@ class AgentService {
               };
             })
           });
+          }
+
+          // 模块2：待复盘事务（已进行或完成但未复盘的事项）
+          const needsReviewTasks = contextData.tasks.filter(t => t.needsReview);
+          if (needsReviewTasks.length > 0) {
+            blocks.push({
+              type: 'task_list',
+              title: '📝 待复盘事务',
+              description: '以下事务已进行或完成，需要进行月底复盘，总结经验和成果。',
+              items: needsReviewTasks.slice(0, 10).map(task => {
+                const orgTask = task.organizationTask;
+                const taskId = orgTask ? orgTask._id : task._id;
+                const taskTitle = task.title;
+
+                return {
+                  id: taskId,
+                  title: taskTitle,
+                  priority: task.priority,
+                  status: task.planStatus,
+                  category: task.category || task.project,
+                  createdAt: task.addedAt,
+                  actions: [{
+                    type: 'review',
+                    label: '开始复盘',
+                    endpoint: `/api/monthly-plan/review/${task._id}` // 复盘接口，后续实现
+                  }]
+                };
+              })
+            });
+          }
         }
         break;
 
@@ -406,19 +435,22 @@ class AgentService {
         // 查找对应的 OrganizationTask
         const orgTask = tasks.find(t => t._id.toString() === planItem.referenceId.toString());
 
-        // 判断是否已有AI分析：检查 status 是 'completed' 或有 analysis 字段
+        // 判断是否已有AI分析：主要看 status 状态
         const hasAnalysis = orgTask && (
           orgTask.status === 'completed' ||
-          (orgTask.analysis && orgTask.analysis.analysis)
+          (orgTask.analysis && orgTask.analysis.categoryPrediction) // 检查是否有分析内容
         );
+        const isAnalyzing = orgTask && orgTask.status === 'analyzing';
+        const needsAnalysis = orgTask && orgTask.status === 'pending' && !hasAnalysis;
 
         return {
           ...planItem,
           organizationTask: orgTask, // 关联的完整组织事务信息
-          needsAnalysis: orgTask && orgTask.status === 'pending' && !hasAnalysis, // 需要分析
-          hasAnalysis: hasAnalysis, // 已有分析
-          isAnalyzing: orgTask && orgTask.status === 'analyzing', // 分析中
-          hasReview: !!planItem.review // 是否已有复盘
+          needsAnalysis, // 需要前置分析
+          hasAnalysis, // 已有前置分析
+          isAnalyzing, // 分析中
+          hasReview: !!planItem.review, // 是否已有月底复盘
+          needsReview: !planItem.review && ['in_progress', 'completed'].includes(planItem.planStatus) // 需要复盘
         };
       }
       return {
