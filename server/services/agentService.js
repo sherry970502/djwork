@@ -152,27 +152,47 @@ class AgentService {
                 category: task.category || task.project,
                 createdAt: task.addedAt,
                 needsAnalysis: task.needsAnalysis,
+                hasAnalysis: task.hasAnalysis,
+                isAnalyzing: task.isAnalyzing,
                 hasReview: task.hasReview,
-                actions: [
-                  // 只有关联了组织事务的才显示 AI 分析按钮
-                  ...(orgTask ? [{
-                    type: 'analyze',
-                    label: 'AI 分析',
-                    endpoint: `/api/tasks/${taskId}/analyze`
-                  },
-                  {
-                    type: 'view',
-                    label: '查看详情',
-                    link: `/tasks?taskId=${taskId}`
-                  }] : [
-                    // 非组织事务类型的项目，只显示查看月度计划的链接
-                    {
+                actions: (() => {
+                  // 如果有关联的组织事务
+                  if (orgTask) {
+                    // 已有分析结果 - 只显示查看详情
+                    if (task.hasAnalysis) {
+                      return [{
+                        type: 'view',
+                        label: '查看分析',
+                        link: `/tasks?taskId=${taskId}`
+                      }];
+                    }
+                    // 正在分析中 - 显示分析中状态
+                    else if (task.isAnalyzing) {
+                      return [{
+                        type: 'view',
+                        label: '分析中...',
+                        link: `/tasks?taskId=${taskId}`,
+                        disabled: true
+                      }];
+                    }
+                    // 待分析 - 显示 AI 分析按钮
+                    else {
+                      return [{
+                        type: 'analyze',
+                        label: 'AI 分析',
+                        endpoint: `/api/tasks/${taskId}/analyze`
+                      }];
+                    }
+                  }
+                  // 非组织事务类型的项目
+                  else {
+                    return [{
                       type: 'view',
                       label: '查看月度计划',
                       link: '/monthly-plan'
-                    }
-                  ])
-                ]
+                    }];
+                  }
+                })()
               };
             })
           });
@@ -385,16 +405,27 @@ class AgentService {
       if (planItem.sourceType === 'task' && planItem.referenceId) {
         // 查找对应的 OrganizationTask
         const orgTask = tasks.find(t => t._id.toString() === planItem.referenceId.toString());
+
+        // 判断是否已有AI分析：检查 status 是 'completed' 或有 analysis 字段
+        const hasAnalysis = orgTask && (
+          orgTask.status === 'completed' ||
+          (orgTask.analysis && orgTask.analysis.analysis)
+        );
+
         return {
           ...planItem,
           organizationTask: orgTask, // 关联的完整组织事务信息
-          needsAnalysis: orgTask && orgTask.status === 'pending', // 是否需要AI分析
+          needsAnalysis: orgTask && orgTask.status === 'pending' && !hasAnalysis, // 需要分析
+          hasAnalysis: hasAnalysis, // 已有分析
+          isAnalyzing: orgTask && orgTask.status === 'analyzing', // 分析中
           hasReview: !!planItem.review // 是否已有复盘
         };
       }
       return {
         ...planItem,
         needsAnalysis: false,
+        hasAnalysis: false,
+        isAnalyzing: false,
         hasReview: !!planItem.review
       };
     });
