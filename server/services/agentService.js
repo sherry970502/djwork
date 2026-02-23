@@ -127,32 +127,54 @@ class AgentService {
     switch (scenario.type) {
       case 'decision_making':
       case 'meeting_prep':
-        // 展示待处理的组织事务列表
+        // 展示月度计划中待处理的事务列表
         if (contextData.tasks && contextData.tasks.length > 0) {
+          // 优先显示需要分析的任务
+          const needsAnalysisTasks = contextData.tasks.filter(t => t.needsAnalysis);
+          const displayTasks = needsAnalysisTasks.length > 0 ? needsAnalysisTasks : contextData.tasks;
+
           blocks.push({
             type: 'task_list',
-            title: '待处理的组织事务',
-            description: '以下是当前待分析和决策的事务，点击可查看详情或触发 AI 分析',
-            items: contextData.tasks.map(task => ({
-              id: task._id,
-              title: task.title || task.description?.substring(0, 100),
-              priority: task.priority,
-              status: task.status,
-              category: task.category,
-              createdAt: task.createdAt,
-              actions: [
-                {
-                  type: 'analyze',
-                  label: 'AI 分析',
-                  endpoint: `/api/tasks/${task._id}/analyze`
-                },
-                {
-                  type: 'view',
-                  label: '查看详情',
-                  link: `/tasks?taskId=${task._id}`
-                }
-              ]
-            }))
+            title: '本月计划中待处理的事务',
+            description: '以下是本月度计划中待分析和决策的事务。这些是当月重点关注的工作项目。',
+            items: displayTasks.slice(0, 10).map(task => {
+              // 如果是 task 类型，使用 organizationTask 的信息
+              const orgTask = task.organizationTask;
+              const taskId = orgTask ? orgTask._id : task._id;
+              const taskTitle = task.title;
+              const taskStatus = task.planStatus;
+
+              return {
+                id: taskId,
+                title: taskTitle,
+                priority: task.priority,
+                status: taskStatus,
+                category: task.category || task.project,
+                createdAt: task.addedAt,
+                needsAnalysis: task.needsAnalysis,
+                hasReview: task.hasReview,
+                actions: [
+                  // 只有关联了组织事务的才显示 AI 分析按钮
+                  ...(orgTask ? [{
+                    type: 'analyze',
+                    label: 'AI 分析',
+                    endpoint: `/api/tasks/${taskId}/analyze`
+                  },
+                  {
+                    type: 'view',
+                    label: '查看详情',
+                    link: `/tasks?taskId=${taskId}`
+                  }] : [
+                    // 非组织事务类型的项目，只显示查看月度计划的链接
+                    {
+                      type: 'view',
+                      label: '查看月度计划',
+                      link: '/monthly-plan'
+                    }
+                  ])
+                ]
+              };
+            })
           });
         }
         break;
@@ -297,8 +319,31 @@ class AgentService {
         break;
     }
 
-    // 并行获取多个数据源
-    const [thoughts, tasks, meetings, plan, tags] = await Promise.all([
+    // 第一步：获取本月月度计划
+    const plan = await MonthlyPlan.findOne({
+      month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    }).lean();
+
+    // 第二步：从月度计划中提取待处理的任务ID
+    let taskIds = [];
+    let planTasks = [];
+    if (plan && plan.items) {
+      // 筛选出待处理和进行中的计划项
+      const activeItems = plan.items.filter(item =>
+        ['pending', 'in_progress'].includes(item.planStatus)
+      );
+
+      // 获取关联的组织事务ID
+      taskIds = activeItems
+        .filter(item => item.sourceType === 'task' && item.referenceId)
+        .map(item => item.referenceId);
+
+      // 同时保存计划项信息（用于非 task 类型的项目）
+      planTasks = activeItems;
+    }
+
+    // 第三步：并行获取其他数据源
+    const [thoughts, tasks, meetings, tags] = await Promise.all([
       // 获取灵感
       Thought.find({
         createdAt: { $gte: startDate },
@@ -310,13 +355,14 @@ class AgentService {
         .limit(20)
         .lean(),
 
-      // 获取组织事务
-      OrganizationTask.find({
-        status: { $in: ['pending', 'analyzing'] }
-      })
-        .sort({ priority: -1, createdAt: -1 })
-        .limit(15)
-        .lean(),
+      // 从月度计划中获取关联的组织事务（优先处理月度计划中的任务）
+      taskIds.length > 0
+        ? OrganizationTask.find({
+            _id: { $in: taskIds }
+          })
+            .sort({ priority: -1 })
+            .lean()
+        : [], // 如果月度计划为空，返回空数组
 
       // 获取会议
       MeetingMinutes.find({
@@ -326,11 +372,6 @@ class AgentService {
         .limit(10)
         .lean(),
 
-      // 获取月度计划
-      MonthlyPlan.findOne({
-        month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-      }).lean(),
-
       // 获取标签统计
       Tag.find()
         .sort({ thoughtCount: -1 })
@@ -338,8 +379,29 @@ class AgentService {
         .lean()
     ]);
 
+    // 第四步：结合月度计划项和组织事务，构建完整的任务列表
+    // 将计划项和实际任务关联起来，加入 review 信息
+    const enrichedTasks = planTasks.map(planItem => {
+      if (planItem.sourceType === 'task' && planItem.referenceId) {
+        // 查找对应的 OrganizationTask
+        const orgTask = tasks.find(t => t._id.toString() === planItem.referenceId.toString());
+        return {
+          ...planItem,
+          organizationTask: orgTask, // 关联的完整组织事务信息
+          needsAnalysis: orgTask && orgTask.status === 'pending', // 是否需要AI分析
+          hasReview: !!planItem.review // 是否已有复盘
+        };
+      }
+      return {
+        ...planItem,
+        needsAnalysis: false,
+        hasReview: !!planItem.review
+      };
+    });
+
     contextData.thoughts = thoughts;
-    contextData.tasks = tasks;
+    contextData.tasks = enrichedTasks; // 使用增强后的任务列表
+    contextData.rawTasks = tasks; // 保留原始组织事务数据
     contextData.meetings = meetings;
     contextData.plan = plan;
     contextData.tags = tags;
@@ -347,7 +409,8 @@ class AgentService {
     // 添加统计信息
     contextData.stats = {
       importantThoughts: thoughts.filter(t => t.isImportant).length,
-      pendingTasks: tasks.filter(t => t.status === 'pending').length,
+      pendingTasks: enrichedTasks.filter(t => t.needsAnalysis).length,
+      tasksWithReview: enrichedTasks.filter(t => t.hasReview).length,
       recentMeetings: meetings.length,
       planProgress: plan ? this.calculatePlanProgress(plan) : null
     };
@@ -453,14 +516,22 @@ ${contextPrompt}
       prompt += '\n';
     }
 
-    // 组织事务池
+    // 本月计划事务（优先关注）
     if (contextData.tasks && contextData.tasks.length > 0) {
-      prompt += `### 组织事务池 (${contextData.tasks.length}个待处理)\n`;
-      prompt += `- 待分析：${contextData.stats.pendingTasks} 个\n`;
+      prompt += `### 本月计划事务 (${contextData.tasks.length}个)\n`;
+      prompt += `**重要说明：这些是从本月度计划中筛选的待处理事务，是当月工作的重点。**\n`;
+      prompt += `- 需要AI分析：${contextData.stats.pendingTasks} 个\n`;
+      prompt += `- 已有复盘：${contextData.stats.tasksWithReview} 个\n`;
       prompt += `- 高优先级：${contextData.tasks.filter(t => t.priority === 'high').length} 个\n`;
-      prompt += `- 待处理事务列表：\n`;
+      prompt += `- 计划事务列表：\n`;
       contextData.tasks.slice(0, 8).forEach((task, i) => {
-        prompt += `  ${i + 1}. [${task.priority === 'high' ? '高优先级' : '普通'}] ${task.title || task.description?.substring(0, 50)}\n`;
+        const statusTag = task.needsAnalysis ? '[待分析]' : task.hasReview ? '[已复盘]' : '[处理中]';
+        const priorityTag = task.priority === 'high' ? '[高优先级]' : '';
+        prompt += `  ${i + 1}. ${statusTag} ${priorityTag} ${task.title}\n`;
+        // 如果有关联的灵感，提示
+        if (task.review && task.review.relatedThoughts && task.review.relatedThoughts.length > 0) {
+          prompt += `     └─ 关联灵感：${task.review.relatedThoughts.length}条\n`;
+        }
       });
       prompt += '\n';
     }
